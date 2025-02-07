@@ -102,7 +102,7 @@ ContentText <- new_class(
   properties = list(text = prop_string()),
 )
 method(format, ContentText) <- function(x, ...) {
-  paste0(unlist(strwrap(x@text, width = getOption("width"))), collapse = "\n")
+  x@text
 }
 
 method(contents_text, ContentText) <- function(content) {
@@ -269,4 +269,19 @@ as_content <- function(x, error_call = caller_env()) {
       error_call = error_call
     )
   }
+}
+
+#' @rdname Content
+#' @export
+ContentPDF <- new_class(
+  "ContentPDF", 
+  parent = Content,
+  properties = list(
+    type = prop_string(),
+    data = prop_string()
+  )
+)
+
+method(format, ContentPDF) <- function(x, ...) {
+  "<PDF document>"
 }

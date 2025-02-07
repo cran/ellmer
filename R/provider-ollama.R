@@ -2,8 +2,10 @@
 #'
 #' @description
 #' To use `chat_ollama()` first download and install
-#' [Ollama](https://ollama.com). Then install some models from the command line,
-#' e.g. with `ollama pull llama3.1` or `ollama pull gemma2`.
+#' [Ollama](https://ollama.com). Then install some models either from the
+#' command line (e.g. with `ollama pull llama3.1`) or within R using
+#' {[ollamar](https://hauselin.github.io/ollama-r/)} (e.g.
+#' `ollamar::pull("llama3.1")`).
 #'
 #' This function is a lightweight wrapper around [chat_openai()] with
 #' the defaults tweaked for ollama.
@@ -12,6 +14,9 @@
 #'
 #' * Tool calling is not supported with streaming (i.e. when `echo` is
 #'   `"text"` or `"all"`)
+#' * Models can only use 2048 input tokens, and there's no way
+#'   to get them to use more, except by creating a custom model with a
+#'   different default.
 #' * Tool calling generally seems quite weak, at least with the models I have
 #'   tried it with.
 #'
@@ -54,6 +59,14 @@ chat_ollama <- function(system_prompt = NULL,
     api_args = api_args,
     echo = echo
   )
+}
+
+chat_ollama_test <- function(..., model = "llama3.3") {
+  if (!has_ollama()) {
+    testthat::skip("ollama not found")
+  }
+
+  chat_ollama(..., model = model)
 }
 
 ollama_models <- function(base_url = "http://localhost:11434") {

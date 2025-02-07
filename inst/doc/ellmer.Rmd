@@ -69,9 +69,11 @@ It's important to note that a request includes not only the current user prompt,
 
 The user prompt is the question that you send to the model. There are two other important prompts that underlie the user prompt:
 
-* The **core system prompt**, which is unchangeable, set by the model provider, and affects every conversation. You can see what these look like from Anthropic, who [publishes their core system prompts](https://docs.anthropic.com/en/release-notes/system-prompts).
+* The **platform prompt**, which is unchangeable, set by the model provider, and affects every conversation. You can see what these look like from Anthropic, who [publishes their core system prompts](https://docs.anthropic.com/en/release-notes/system-prompts).
 
-* The **system prompt**, which is set when you create a new conversation, and affects every response. It's used to provide additional instructions to the model, shaping its responses to your needs. For example, you might use the system prompt to ask the model to always respond in Spanish or to write dependency-free base R code. You can also use the system prompt to provide the model with information it wouldn't otherwise know, like the details of your database schema, or your preferred ggplot2 theme and color palette.
+* The **system prompt** (aka developer prompt), which is set when you create a new conversation, and affects every response. It's used to provide additional instructions to the model, shaping its responses to your needs. For example, you might use the system prompt to ask the model to always respond in Spanish or to write dependency-free base R code. You can also use the system prompt to provide the model with information it wouldn't otherwise know, like the details of your database schema, or your preferred ggplot2 theme and color palette.
+
+OpenAI calls this the [chain of command](https://cdn.openai.com/spec/model-spec-2024-05-08.html#follow-the-chain-of-command): if there are conflicts or inconsistencies the prompts, the platform prompt overrides the system prompt, which in turn overrides the user prompt.
 
 When you use a chat app like ChatGPT or claude.ai you can only iterate on the user prompt. But when you're programming with LLMs, you'll primarily iterate on the system prompt. For example, if you're developing an app that helps a user write tidyverse code, you'd work with the system prompt to ensure that user gets the style of code they want.
 
@@ -81,7 +83,7 @@ Writing a good prompt, which is called __prompt design__, is key to effective us
 
 Now that you've got the basic vocab under your belt, I'm going to fire a bunch of interesting potential use cases at you. While there are special purpose tools that might solve these cases faster and/or cheaper, an LLM allows you to rapidly prototype a solution. This can be extremely valuable even if you end up using those more specialised tools in your final product.
 
-In general, we recommend avoiding LLMs where accuracy is critical. That said, there are still many cases for their use. For example, even though they always requires some manual fiddling, you might save a bunch of time evern with an 80% correct solution. In fact, even a not-so-good solution can still be useful because it makes it easier to get started: it's easier to react to something rather than to have to start from scratch with a blank page.
+In general, we recommend avoiding LLMs where accuracy is critical. That said, there are still many cases for their use. For example, even though they always require some manual fiddling, you might save a bunch of time ever with an 80% correct solution. In fact, even a not-so-good solution can still be useful because it makes it easier to get started: it's easier to react to something rather than to have to start from scratch with a blank page.
 
 ### Chatbots
 

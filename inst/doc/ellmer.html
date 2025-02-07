@@ -60,7 +60,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -418,17 +418,18 @@ printing it, and you can see total usage for a session with
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>(<span class="at">model =</span> <span class="st">&quot;gpt-4o&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>. <span class="ot">&lt;-</span> chat<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;Who created R?&quot;</span>, <span class="at">echo =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>chat</span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; &lt;Chat turns=2 tokens=11/48&gt;</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; &lt;Chat turns=2 tokens=11/52&gt;</span></span>
 <span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co">#&gt; ── user ────────────────────────────────────────────────────────────────────────</span></span>
 <span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt; Who created R?</span></span>
 <span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt; ── assistant ───────────────────────────────────────────────────────────────────</span></span>
 <span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; R was created by Ross Ihaka and Robert Gentleman at the University of Auckland,</span></span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt; New Zealand. The project began in the mid-1990s as an implementation of the S</span></span>
-<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt; programming language with a focus on statistical computing and data analysis.</span></span>
-<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a></span>
-<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="fu">token_usage</span>()</span>
-<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="co">#&gt;                       name input output</span></span>
-<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="co">#&gt; 1 OpenAI-api.openai.com/v1    11     48</span></span></code></pre></div>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt; New Zealand, in the mid-1990s. It is a free software environment for </span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt; statistical computing and graphics and has since become widely used among </span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt; statisticians and data scientists.</span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="fu">token_usage</span>()</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="co">#&gt;                       name input output</span></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="co">#&gt; 1 OpenAI-api.openai.com/v1    11     52</span></span></code></pre></div>
 <p>If you want to learn more about tokens and tokenizers, I’d recommend
 watching the first 20-30 minutes of <a href="https://www.youtube.com/watch?v=zduSFxRajkE">Let’s build the GPT
 Tokenizer</a> by Andrej Karpathy. You certainly don’t need to learn how
@@ -465,19 +466,24 @@ finish it with another.</p></li>
 <p>The user prompt is the question that you send to the model. There are
 two other important prompts that underlie the user prompt:</p>
 <ul>
-<li><p>The <strong>core system prompt</strong>, which is unchangeable,
-set by the model provider, and affects every conversation. You can see
-what these look like from Anthropic, who <a href="https://docs.anthropic.com/en/release-notes/system-prompts">publishes
+<li><p>The <strong>platform prompt</strong>, which is unchangeable, set
+by the model provider, and affects every conversation. You can see what
+these look like from Anthropic, who <a href="https://docs.anthropic.com/en/release-notes/system-prompts">publishes
 their core system prompts</a>.</p></li>
-<li><p>The <strong>system prompt</strong>, which is set when you create
-a new conversation, and affects every response. It’s used to provide
-additional instructions to the model, shaping its responses to your
-needs. For example, you might use the system prompt to ask the model to
-always respond in Spanish or to write dependency-free base R code. You
-can also use the system prompt to provide the model with information it
-wouldn’t otherwise know, like the details of your database schema, or
-your preferred ggplot2 theme and color palette.</p></li>
+<li><p>The <strong>system prompt</strong> (aka developer prompt), which
+is set when you create a new conversation, and affects every response.
+It’s used to provide additional instructions to the model, shaping its
+responses to your needs. For example, you might use the system prompt to
+ask the model to always respond in Spanish or to write dependency-free
+base R code. You can also use the system prompt to provide the model
+with information it wouldn’t otherwise know, like the details of your
+database schema, or your preferred ggplot2 theme and color
+palette.</p></li>
 </ul>
+<p>OpenAI calls this the <a href="https://cdn.openai.com/spec/model-spec-2024-05-08.html#follow-the-chain-of-command">chain
+of command</a>: if there are conflicts or inconsistencies the prompts,
+the platform prompt overrides the system prompt, which in turn overrides
+the user prompt.</p>
 <p>When you use a chat app like ChatGPT or claude.ai you can only
 iterate on the user prompt. But when you’re programming with LLMs,
 you’ll primarily iterate on the system prompt. For example, if you’re
@@ -499,8 +505,8 @@ extremely valuable even if you end up using those more specialised tools
 in your final product.</p>
 <p>In general, we recommend avoiding LLMs where accuracy is critical.
 That said, there are still many cases for their use. For example, even
-though they always requires some manual fiddling, you might save a bunch
-of time evern with an 80% correct solution. In fact, even a not-so-good
+though they always require some manual fiddling, you might save a bunch
+of time ever with an 80% correct solution. In fact, even a not-so-good
 solution can still be useful because it makes it easier to get started:
 it’s easier to react to something rather than to have to start from
 scratch with a blank page.</p>

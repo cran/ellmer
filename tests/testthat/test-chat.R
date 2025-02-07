@@ -38,6 +38,11 @@ test_that("can get and set turns", {
   expect_equal(chat$get_turns(), list(Turn("user"), Turn("assistant")))
 })
 
+test_that("can get model", {
+  chat <- chat_openai(model = "abc")
+  expect_equal(chat$get_model(), "abc")
+})
+
 test_that("setting turns usually preserves, but can set system prompt", {
   chat <- chat_openai(system_prompt = "You're a funny guy")
   chat$set_turns(list())
@@ -116,7 +121,7 @@ test_that("has a basic print method", {
   chat <- chat_openai(
     "You're a helpful assistant that returns very minimal output",
     turns = list(
-      Turn("user", "What's 1 + 1? What's 1 + 2?"),
+      Turn("user", "What's 1 + 1?\nWhat's 1 + 2?"),
       Turn("assistant", "2\n\n3", tokens = c(15, 5))
     )
   )

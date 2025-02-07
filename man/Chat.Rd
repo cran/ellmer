@@ -30,6 +30,7 @@ chat$chat("Tell me a funny joke")
 \item \href{#method-Chat-get_turns}{\code{Chat$get_turns()}}
 \item \href{#method-Chat-set_turns}{\code{Chat$set_turns()}}
 \item \href{#method-Chat-get_system_prompt}{\code{Chat$get_system_prompt()}}
+\item \href{#method-Chat-get_model}{\code{Chat$get_model()}}
 \item \href{#method-Chat-set_system_prompt}{\code{Chat$set_system_prompt()}}
 \item \href{#method-Chat-tokens}{\code{Chat$tokens()}}
 \item \href{#method-Chat-last_turn}{\code{Chat$last_turn()}}
@@ -119,6 +120,16 @@ Replace existing turns with a new list.
 If set, the system prompt, it not, \code{NULL}.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Chat$get_system_prompt()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Chat-get_model"></a>}}
+\if{latex}{\out{\hypertarget{method-Chat-get_model}{}}}
+\subsection{Method \code{get_model()}}{
+Retrieve the model name
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Chat$get_model()}\if{html}{\out{</div>}}
 }
 
 }

@@ -29,7 +29,7 @@ Provider <- new_class(
 # Create a request------------------------------------
 
 chat_request <- new_generic("chat_request", "provider",
-  function(provider, stream = TRUE, turns = list(), tools = list(), type = NULL, extra_args = list()) {
+  function(provider, stream = TRUE, turns = list(), tools = list(), type = NULL) {
     S7_dispatch()
   }
 )
@@ -69,7 +69,7 @@ value_turn <- new_generic("value_turn", "provider")
 as_json <- new_generic("as_json", c("provider", "x"))
 
 method(as_json, list(Provider, class_list)) <- function(provider, x) {
-  lapply(x, as_json, provider = provider)
+  compact(lapply(x, as_json, provider = provider))
 }
 
 method(as_json, list(Provider, ContentJson)) <- function(provider, x) {

@@ -34,23 +34,26 @@ ellmer supports a wide variety of model providers:
 - AWS Bedrock: `chat_bedrock()`.
 - Azure OpenAI: `chat_azure()`.
 - Databricks: `chat_databricks()`.
+- DeepSeek: `chat_deepseek()`.
 - GitHub model marketplace: `chat_github()`.
 - Google Gemini: `chat_gemini()`.
 - Groq: `chat_groq()`.
 - Ollama: `chat_ollama()`.
 - OpenAI: `chat_openai()`.
+- OpenRouter: `chat_openrouter()`.
 - perplexity.ai: `chat_perplexity()`.
-- Snowflake Cortex: `chat_cortex()`.
+- Snowflake Cortex: `chat_snowflake()` and `chat_cortex_analyst()`.
 - VLLM: `chat_vllm()`.
 
-## Model choice
+### Provider/model choice
 
-If you’re using ellmer inside your organisation, you’ll be limited to
-what your IT department allows, which is likely to be one provided by a
-big cloud provider, e.g. `chat_azure()`, `chat_bedrock()`,
-`chat_databricks()`, or `chat_snowflake()`. If you’re using ellmer for
-your own exploration, you’ll have a lot more freedom, so we have a few
-recommendations to help you get started:
+If you’re using ellmer inside an organisation, you may have internal
+policies that limit you to models from big cloud providers,
+e.g. `chat_azure()`, `chat_bedrock()`, `chat_databricks()`, or
+`chat_snowflake()`.
+
+If you’re using ellmer for your own exploration, you’ll have a lot more
+freedom, so we have a few recommendations to help you get started:
 
 - `chat_openai()` or `chat_claude()` are good places to start.
   `chat_openai()` defaults to **GPT-4o**, but you can use
@@ -61,12 +64,36 @@ recommendations to help you get started:
 
 - `chat_gemini()` is great for large prompts because it has a much
   larger context window than other models. It allows up to 1 million
-  tokens, compared to Claude 3.5 Sonnet’s 200k and GPT-4o’s 128k.
+  tokens, compared to Claude 3.5 Sonnet’s 200k and GPT-4o’s 128k. It
+  also comes with a generous free tier (with the downside that [your
+  data is used](https://ai.google.dev/gemini-api/terms#unpaid-services)
+  to improve the model).
 
 - `chat_ollama()`, which uses [Ollama](https://ollama.com), allows you
   to run models on your own computer. While the biggest models you can
   run locally aren’t as good as the state of the art hosted models, they
   don’t share your data and are effectively free.
+
+### Authentication
+
+Authentication works a little differently depending on the provider. A
+few popular ones (including OpenAI and Anthropic) require you to obtain
+an API key. We recommend you save it in an environment variable rather
+than using it directly in your code, and if you deploy an app or report
+that uses ellmer to another system, you’ll need to ensure that this
+environment variable is available there, too.
+
+ellmer also automatically detects many of the OAuth or IAM-based
+credentials used by the big cloud providers (currently `chat_azure()`,
+`chat_bedrock()`, `chat_databricks()`, `chat_snowflake()`). That
+includes credentials for these platforms managed by [Posit
+Workbench](https://docs.posit.co/ide/server-pro/user/posit-workbench/managed-credentials/managed-credentials.html)
+and [Posit
+Connect](https://docs.posit.co/connect/user/oauth-integrations/#adding-oauth-integrations-to-deployed-content).
+
+If you find cases where ellmer cannot detect credentials from one of
+these cloud providers, feel free to open an issue; we’re happy to add
+more auth mechanisms if needed.
 
 ## Using ellmer
 

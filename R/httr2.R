@@ -5,8 +5,7 @@ chat_perform <- function(provider,
                          mode = c("value", "stream", "async-stream", "async-value"),
                          turns,
                          tools = list(),
-                         type = NULL,
-                         extra_args = list()) {
+                         type = NULL) {
 
   mode <- arg_match(mode)
   stream <- mode %in% c("stream", "async-stream")
@@ -16,8 +15,7 @@ chat_perform <- function(provider,
     turns = turns,
     tools = tools,
     stream = stream,
-    type = type,
-    extra_args = extra_args
+    type = type
   )
 
   switch(mode,
@@ -75,83 +73,8 @@ on_load(chat_perform_async_stream <- coro::async_generator(function(provider, re
   }
 }))
 
-# The following functions are just wrappers around httr2::resp_stream_* and
-# httr2::req_perform*, but with optional logging.
+# Request helpers --------------------------------------------------------------
 
-resp_stream_sse <- function(resp, max_size = Inf) {
-  event <- httr2::resp_stream_sse(resp, max_size = max_size)
-  if (!is.null(event) && log_http_traffic()) {
-    cat_with_prefix("< ", paste0(names(event), ": ", event))
-    cat("\n")
-  }
-  event
-}
-
-resp_stream_aws <- function(resp, max_size = Inf) {
-  event <- httr2::resp_stream_aws(resp, max_size = max_size)
-  if (!is.null(event) && log_http_traffic()) {
-    # Emit header
-    cat_with_prefix("< ", paste0(names(event$headers), ": ", event$headers))
-    cat("\n")
-
-    # Emit body
-    cat_with_prefix("< ", event$body)
-    cat("\n")
-  }
-  event
-}
-
-req_perform <- function(req, ...) {
-  log_req_body(req)
-  resp <- httr2::req_perform(req, ...)
-  log_resp_body(resp)
-  resp
-}
-
-req_perform_promise <- function(req, ...) {
-  log_req_body(req)
-  promises::then(httr2::req_perform_promise(req, ...), function(resp) {
-    log_resp_body(resp)
-    resp
-  })
-}
-
-req_perform_connection <- function(req, blocking = TRUE) {
-  log_req_body(req)
-  httr2::req_perform_connection(req, blocking = blocking)
-}
-
-log_req_body <- function(req) {
-  if (log_http_traffic()) {
-    body <- req$body$data
-    if (!is.null(body)) {
-      cat_with_prefix("> ", jsonlite::toJSON(body, auto_unbox = TRUE, pretty = TRUE))
-      cat("\n")
-    }
-  }
-  invisible()
-}
-
-log_resp_body <- function(resp) {
-  if (log_http_traffic()) {
-    body <- resp_body_json(resp)
-    if (!is.null(body)) {
-      cat_with_prefix("< ", jsonlite::toJSON(body, auto_unbox = TRUE, pretty = TRUE))
-      cat("\n")
-    }
-  }
-  invisible()
-}
-
-# Prefixes each line of `lines` with `prefix`. `lines` must be a character
-# vector but can be any length, and can contain embedded newlines or not.
-cat_with_prefix <- function(prefix, lines) {
-  if (length(lines) > 0) {
-    lines <- unlist(strsplit(lines, "\n"))
-    cat(paste0(prefix, lines, "\n"), sep = "")
-  }
-}
-
-log_http_traffic <- function() {
-  getOption("ellmer_verbosity", 0L) >= 2L
+ellmer_req_timeout <- function(req, stream) {
+  req_options(req, timeout = getOption("ellmer_timeout_s", 60))
 }

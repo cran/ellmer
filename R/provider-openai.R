@@ -100,22 +100,24 @@ method(chat_request, ProviderOpenAI) <- function(provider,
                                                  stream = TRUE,
                                                  turns = list(),
                                                  tools = list(),
-                                                 type = NULL,
-                                                 extra_args = list()) {
+                                                 type = NULL) {
 
   req <- request(provider@base_url)
   req <- req_url_path_append(req, "/chat/completions")
   req <- req_auth_bearer_token(req, provider@api_key)
   req <- req_retry(req, max_tries = 2)
+  req <- ellmer_req_timeout(req, stream)
+
   req <- req_error(req, body = function(resp) {
     if (resp_content_type(resp) == "application/json") {
       resp_body_json(resp)$error$message
+    } else if (resp_content_type(resp) == "text/plain") {
+      resp_body_string(resp)
     }
   })
 
   messages <- compact(unlist(as_json(provider, turns), recursive = FALSE))
   tools <- as_json(provider, unname(tools))
-  extra_args <- utils::modifyList(provider@extra_args, extra_args)
 
   if (!is.null(type)) {
     response_format <- list(
@@ -130,17 +132,17 @@ method(chat_request, ProviderOpenAI) <- function(provider,
     response_format <- NULL
   }
 
-  data <- compact(list2(
+  body <- compact(list(
     messages = messages,
     model = provider@model,
     seed = provider@seed,
     stream = stream,
     stream_options = if (stream) list(include_usage = TRUE),
     tools = tools,
-    response_format = response_format,
-    !!!extra_args
+    response_format = response_format
   ))
-  req <- req_body_json(req, data)
+  body <- utils::modifyList(body, provider@extra_args)
+  req <- req_body_json(req, body)
 
   req
 }

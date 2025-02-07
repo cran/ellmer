@@ -6,6 +6,7 @@ NULL
 
 #' Chat with a Google Gemini model
 #'
+#' ## Authentication
 #' To authenticate, we recommend saving your
 #' [API key](https://aistudio.google.com/app/apikey) to
 #' the `GOOGLE_API_KEY` env var in your `.Renviron`
@@ -31,7 +32,7 @@ chat_gemini <- function(system_prompt = NULL,
                             api_args = list(),
                             echo = NULL) {
   turns <- normalize_turns(turns, system_prompt)
-  model <- set_default(model, "gemini-1.5-flash")
+  model <- set_default(model, "gemini-2.0-flash")
   echo <- check_echo(echo)
 
   provider <- ProviderGemini(
@@ -60,13 +61,13 @@ method(chat_request, ProviderGemini) <- function(provider,
                                                  stream = TRUE,
                                                  turns = list(),
                                                  tools = list(),
-                                                 type = NULL,
-                                                 extra_args = list()) {
+                                                 type = NULL) {
 
 
   req <- request(provider@base_url)
-  req <- req_headers(req, "x-goog-api-key" = provider@api_key, .redact = "x-goog-api-key")
+  req <- req_headers_redacted(req, "x-goog-api-key" = provider@api_key)
   req <- req_retry(req, max_tries = 2)
+  req <- ellmer_req_timeout(req, stream)
   req <- req_error(req, body = function(resp) {
     json <- resp_body_json(resp, check_type = FALSE)
     json$error$message
@@ -74,11 +75,11 @@ method(chat_request, ProviderGemini) <- function(provider,
 
   req <- req_url_path_append(req, "models")
   if (stream) {
-    # https://ai.google.dev/api/generate-content
+    # https://ai.google.dev/api/generate-content#method:-models.streamgeneratecontent
     req <- req_url_path_append(req, paste0(provider@model, ":", "streamGenerateContent"))
     req <- req_url_query(req, alt = "sse")
   } else {
-    # https://ai.google.dev/api/generate-content#method:-models.streamgeneratecontent
+    # https://ai.google.dev/api/generate-content#method:-models.generatecontent
     req <- req_url_path_append(req, paste0(provider@model, ":", "generateContent"))
   }
 
@@ -106,15 +107,15 @@ method(chat_request, ProviderGemini) <- function(provider,
   } else {
     tools <- NULL
   }
-  extra_args <- utils::modifyList(provider@extra_args, extra_args)
 
   body <- compact(list(
     contents = contents,
     tools = tools,
     systemInstruction = system,
-    generationConfig = generation_config,
-    !!!extra_args
+    generationConfig = generation_config
   ))
+  body <- modify_list(body, provider@extra_args)
+
   req <- req_body_json(req, body)
 
   req
@@ -206,6 +207,15 @@ method(as_json, list(ProviderGemini, ContentText)) <- function(provider, x) {
   } else {
     list(text = x@text)
   }
+}
+
+method(as_json, list(ProviderGemini, ContentPDF)) <- function(provider, x) {
+  list(
+    inlineData = list(
+      mimeType = x@type,
+      data = x@data
+    )
+  )
 }
 
 # https://ai.google.dev/api/caching#FileData

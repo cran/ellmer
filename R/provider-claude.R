@@ -13,6 +13,8 @@ NULL
 #' models via the API; instead, you will need to sign up (and pay for) a
 #' [developer account](https://console.anthropic.com/)
 #'
+#' ## Authentication
+#'
 #' To authenticate, we recommend saving your
 #' [API key](https://console.anthropic.com/account/keys) to
 #' the `ANTHROPIC_API_KEY` env var in your `.Renviron`
@@ -74,23 +76,23 @@ method(chat_request, ProviderClaude) <- function(provider,
                                                  stream = TRUE,
                                                  turns = list(),
                                                  tools = list(),
-                                                 type = NULL,
-                                                 extra_args = list()) {
+                                                 type = NULL) {
 
   req <- request(provider@base_url)
   # https://docs.anthropic.com/en/api/messages
   req <- req_url_path_append(req, "/messages")
-
-  req <- req_headers(req,
-    # <https://docs.anthropic.com/en/api/versioning>
-    `anthropic-version` = "2023-06-01",
-    # <https://docs.anthropic.com/en/api/getting-started#authentication>
-    `x-api-key` = provider@api_key,
-    .redact = "x-api-key"
-  )
-
+  # <https://docs.anthropic.com/en/api/versioning>
+  req <- req_headers(req, `anthropic-version` = "2023-06-01")
+  # <https://docs.anthropic.com/en/api/getting-started#authentication>
+  req <- req_headers_redacted(req, `x-api-key` = provider@api_key)
   # <https://docs.anthropic.com/en/api/rate-limits>
-  req <- req_retry(req, max_tries = 2)
+  req <- req_retry(
+    req,
+    # <https://docs.anthropic.com/en/api/errors#http-errors>
+    is_transient = function(resp) resp_status(resp) %in% c(429, 503, 529),
+    max_tries = 2
+  )
+  req <- ellmer_req_timeout(req, stream)
 
   # <https://docs.anthropic.com/en/api/errors>
   req <- req_error(req, body = function(resp) {
@@ -123,7 +125,6 @@ method(chat_request, ProviderClaude) <- function(provider,
   }
   tools <- as_json(provider, unname(tools))
 
-  extra_args <- utils::modifyList(provider@extra_args, extra_args)
   body <- compact(list2(
     model = provider@model,
     system = system,
@@ -132,8 +133,8 @@ method(chat_request, ProviderClaude) <- function(provider,
     max_tokens = provider@max_tokens,
     tools = tools,
     tool_choice = tool_choice,
-    !!!extra_args
   ))
+  body <- modify_list(body, provider@extra_args)
   req <- req_body_json(req, body)
 
   req
@@ -239,6 +240,17 @@ method(as_json, list(ProviderClaude, Turn)) <- function(provider, x) {
 
 method(as_json, list(ProviderClaude, ContentText)) <- function(provider, x) {
   list(type = "text", text = x@text)
+}
+
+method(as_json, list(ProviderClaude, ContentPDF)) <- function(provider, x) {
+  list(
+    type = "document",
+    source = list(
+      type = "base64",
+      media_type = x@type,
+      data = x@data
+    )
+  )
 }
 
 method(as_json, list(ProviderClaude, ContentImageRemote)) <- function(provider, x) {

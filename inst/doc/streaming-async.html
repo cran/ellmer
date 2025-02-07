@@ -60,7 +60,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -343,18 +343,17 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <div id="streaming-results" class="section level3">
 <h3>Streaming results</h3>
 <p>The <code>chat()</code> method does not return any results until the
-entire response has been received. (It can <em>print</em> the streaming
-results to the console, but it <em>returns</em> the result only when the
+entire response is received. (It can <em>print</em> the streaming
+results to the console but it <em>returns</em> the result only when the
 response is complete.)</p>
 <p>If you want to process the response as it arrives, you can use the
-<code>stream()</code> method. This may be useful when you want to
-display the response in realtime, but somewhere other than the R console
-(like writing to a file, or an HTTP response, or a Shiny chat window);
-or when you want to manipulate the response before displaying it,
-without giving up the immediacy of streaming.</p>
-<p>The <code>stream()</code> method returns a <a href="https://coro.r-lib.org/articles/generator.html">generator</a> from
-the <a href="https://coro.r-lib.org/">coro package</a>, which you can
-loop over to process the response as it arrives.</p>
+<code>stream()</code> method. This is useful when you want to send the
+response, in realtime, somewhere other than the R console (e.g., to a
+file, an HTTP response, or a Shiny chat window), or when you want to
+manipulate the response before displaying it without giving up the
+immediacy of streaming.</p>
+<p>With the <code>stream()</code> method, which returns a <a href="https://coro.r-lib.org/">coro</a> <a href="https://coro.r-lib.org/articles/generator.html">generator</a>, you
+can process the response by looping over it as it arrives.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>stream <span class="ot">&lt;-</span> chat<span class="sc">$</span><span class="fu">stream</span>(<span class="st">&quot;What are some common uses of R?&quot;</span>)</span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>coro<span class="sc">::</span><span class="fu">loop</span>(<span class="cf">for</span> (chunk <span class="cf">in</span> stream) {</span>
 <span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">toupper</span>(chunk))</span>
@@ -374,26 +373,26 @@ loop over to process the response as it arrives.</p>
 </div>
 <div id="async-usage" class="section level2">
 <h2>Async usage</h2>
-<p>ellmer also supports async usage, which is useful when you want to
-run multiple chat sessions concurrently. This is primarily useful in
-Shiny applications, where using the methods described above would block
+<p>ellmer also supports async usage. This is useful when you want to run
+multiple, concurrent chat sessions. This is particularly important for
+Shiny applications where using the methods described above would block
 the Shiny app for other users for the duration of each response.</p>
-<p>To use async chat, instead of
-<code>chat()</code>/<code>stream()</code>, call
-<code>chat_async()</code>/<code>stream_async()</code>. The
-<code>_async</code> variants take the same arguments for construction,
-but return promises instead of the actual response.</p>
-<p>Remember that chat objects are stateful, maintaining the conversation
-history as you interact with it. Note that this means it doesn’t make
-sense to issue multiple chat/stream operations on the same chat object
-concurrently, as the conversation history could become corrupted with
-interleaved conversation fragments. If you need to run multiple chat
-sessions concurrently, create multiple chat objects.</p>
+<p>To use async chat, call
+<code>chat_async()</code>/<code>stream_async()</code> instead of
+<code>chat()</code>/<code>stream()</code>. The <code>_async</code>
+variants take the same arguments for construction but return a promise
+instead of the actual response.</p>
+<p>Remember that chat objects are stateful; they preserve the
+conversation history as you interact with it. This means that it doesn’t
+make sense to issue multiple, concurrent chat/stream operations on the
+same chat object because the conversation history can become corrupted
+with interleaved conversation fragments. If you need to run concurrent
+chat sessions, create multiple chat objects.</p>
 <div id="asynchronous-chat" class="section level3">
 <h3>Asynchronous chat</h3>
-<p>For asynchronous, non-streaming chat, you use the <code>chat()</code>
-method as before, but handle the result as a promise instead of a
-string.</p>
+<p>For asynchronous, non-streaming chat, you’d use the
+<code>chat()</code> method as before, but handle the result as a promise
+instead of a string.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">library</span>(promises)</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat_async</span>(<span class="st">&quot;How&#39;s your day going?&quot;</span>) <span class="sc">%...&gt;%</span> <span class="fu">print</span>()</span>
@@ -402,12 +401,12 @@ string.</p>
 </div>
 <div id="asynchronous-streaming" class="section level3">
 <h3>Asynchronous streaming</h3>
-<p>For asynchronous streaming, you use the <code>stream()</code> method
-as before, but the result is a <a href="https://coro.r-lib.org/reference/async_generator.html">async
+<p>For asynchronous streaming, you’d use the <code>stream()</code>
+method as before, but the result is an <a href="https://coro.r-lib.org/reference/async_generator.html">async
 generator</a> from the <a href="https://coro.r-lib.org/">coro
 package</a>. This is the same as a regular <a href="https://coro.r-lib.org/articles/generator.html">generator</a>,
-except instead of giving you strings, it gives you promises that resolve
-to strings.</p>
+except that instead of giving you strings, it gives you promises that
+resolve to strings.</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>stream <span class="ot">&lt;-</span> chat<span class="sc">$</span><span class="fu">stream_async</span>(<span class="st">&quot;What are some common uses of R?&quot;</span>)</span>
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>coro<span class="sc">::</span><span class="fu">async</span>(<span class="cf">function</span>() {</span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="cf">for</span> (chunk <span class="cf">in</span> <span class="fu">await_each</span>(stream)) {</span>
@@ -424,11 +423,11 @@ to strings.</p>
 <span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt;  6. **TIME SERIES ANALYSIS**: ANALYZING TEMPORAL DATA FOR TRENDS AND FORECASTS.</span></span>
 <span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt;  7. **REPORT GENERATION**: CREATING DYNAMIC REPORTS WITH R MARKDOWN.</span></span>
 <span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt;  8. **GEOSPATIAL ANALYSIS**: MAPPING AND ANALYZING GEOGRAPHIC DATA.</span></span></code></pre></div>
-<p>Async generators are very advanced, and require a good understanding
+<p>Async generators are very advanced and require a good understanding
 of asynchronous programming in R. They are also the only way to present
 streaming results in Shiny without blocking other users. Fortunately,
 Shiny will soon have chat components that will make this easier, where
-you can simply hand the result of <code>stream_async()</code> to a chat
+you’ll simply hand the result of <code>stream_async()</code> to a chat
 output.</p>
 </div>
 </div>
