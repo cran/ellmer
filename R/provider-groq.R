@@ -15,6 +15,8 @@ NULL
 #'
 #' @export
 #' @family chatbots
+#' @param api_key `r api_key_param("GROQ_API_KEY")`
+#' @param model `r param_model("llama3-8b-8192")`
 #' @inheritParams chat_openai
 #' @inherit chat_openai return
 #' @examples
@@ -22,16 +24,15 @@ NULL
 #' chat <- chat_groq()
 #' chat$chat("Tell me three jokes about statisticians")
 #' }
-chat_groq <- function(system_prompt = NULL,
-                      turns = NULL,
-                      base_url = "https://api.groq.com/openai/v1",
-                      api_key = groq_key(),
-                      model = NULL,
-                      seed = NULL,
-                      api_args = list(),
-                      echo = NULL) {
-
-  turns <- normalize_turns(turns, system_prompt)
+chat_groq <- function(
+  system_prompt = NULL,
+  base_url = "https://api.groq.com/openai/v1",
+  api_key = groq_key(),
+  model = NULL,
+  seed = NULL,
+  api_args = list(),
+  echo = NULL
+) {
   model <- set_default(model, "llama3-8b-8192")
   echo <- check_echo(echo)
 
@@ -40,13 +41,14 @@ chat_groq <- function(system_prompt = NULL,
   }
 
   provider <- ProviderGroq(
+    name = "Groq",
     base_url = base_url,
     model = model,
     seed = seed,
     extra_args = api_args,
     api_key = api_key
   )
-  Chat$new(provider = provider, turns = turns, echo = echo)
+  Chat$new(provider = provider, system_prompt = system_prompt, echo = echo)
 }
 
 ProviderGroq <- new_class("ProviderGroq", parent = ProviderOpenAI)
@@ -54,7 +56,7 @@ ProviderGroq <- new_class("ProviderGroq", parent = ProviderOpenAI)
 method(as_json, list(ProviderGroq, Turn)) <- function(provider, x) {
   if (x@role == "assistant") {
     # Tool requests come out of content and go into own argument
-    is_tool <- map_lgl(x@contents, S7_inherits, ContentToolRequest)
+    is_tool <- map_lgl(x@contents, is_tool_request)
     tool_calls <- as_json(provider, x@contents[is_tool])
 
     # Grok contents is just a string. Hopefully it never sends back more
@@ -66,7 +68,11 @@ method(as_json, list(ProviderGroq, Turn)) <- function(provider, x) {
     }
 
     list(
-      compact(list(role = "assistant", content = content, tool_calls = tool_calls))
+      compact(list(
+        role = "assistant",
+        content = content,
+        tool_calls = tool_calls
+      ))
     )
   } else {
     as_json(super(provider, ProviderOpenAI), x)

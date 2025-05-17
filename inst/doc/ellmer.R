@@ -9,7 +9,7 @@ knitr::opts_chunk$set(
 library(ellmer)
 
 ## -----------------------------------------------------------------------------
-chat <- chat_openai(model = "gpt-4o")
+chat <- chat_openai(model = "gpt-4.1")
 . <- chat$chat("Who created R?", echo = FALSE)
 chat
 

@@ -4,10 +4,21 @@
 \alias{tool}
 \title{Define a tool}
 \usage{
-tool(.fun, .description, ..., .name = NULL)
+tool(
+  .fun,
+  .description,
+  ...,
+  .name = NULL,
+  .convert = TRUE,
+  .annotations = list()
+)
 }
 \arguments{
-\item{.fun}{The function to be invoked when the tool is called.}
+\item{.fun}{The function to be invoked when the tool is called. The return
+value of the function is sent back to the chatbot.
+
+Expert users can customize the tool result by returning a
+\link{ContentToolResult} object.}
 
 \item{.description}{A detailed description of what the function does.
 Generally, the more information that you can provide here, the better.}
@@ -17,6 +28,13 @@ function. Each element should be created by a \code{\link[=type_boolean]{type_*(
 function.}
 
 \item{.name}{The name of the function.}
+
+\item{.convert}{Should JSON inputs be automatically convert to their
+R data type equivalents? Defaults to \code{TRUE}.}
+
+\item{.annotations}{Additional properties that describe the tool and its
+behavior. Usually created by \code{\link[=tool_annotations]{tool_annotations()}}, where you can find a
+description of the annotation properties recommended by the \href{https://modelcontextprotocol.io/introduction}{Model Context Protocol}.}
 }
 \value{
 An S7 \code{ToolDef} object.
@@ -37,7 +55,12 @@ tool_rnorm <- tool(
   "Drawn numbers from a random normal distribution",
   n = type_integer("The number of observations. Must be a positive integer."),
   mean = type_number("The mean value of the distribution."),
-  sd = type_number("The standard deviation of the distribution. Must be a non-negative number.")
+  sd = type_number("The standard deviation of the distribution. Must be a non-negative number."),
+  .annotations = tool_annotations(
+    title = "Draw Random Normal Numbers",
+    read_only_hint = TRUE,
+    open_world_hint = FALSE
+  )
 )
 chat <- chat_openai()
 # Then register it
@@ -53,3 +76,9 @@ chat$chat("
 # results are send back in a tool result.
 \dontshow{\}) # examplesIf}
 }
+\seealso{
+Other tool calling helpers: 
+\code{\link{tool_annotations}()},
+\code{\link{tool_reject}()}
+}
+\concept{tool calling helpers}

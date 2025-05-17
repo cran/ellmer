@@ -11,6 +11,8 @@ NULL
 #'
 #' @export
 #' @family chatbots
+#' @param api_key `r api_key_param("OPENROUTER_API_KEY")`
+#' @param model `r param_model("gpt-4o")`
 #' @inheritParams chat_openai
 #' @inherit chat_openai return
 #' @examples
@@ -20,14 +22,12 @@ NULL
 #' }
 chat_openrouter <- function(
   system_prompt = NULL,
-  turns = NULL,
   api_key = openrouter_key(),
   model = NULL,
   seed = NULL,
   api_args = list(),
-  echo = c("none", "text", "all")
+  echo = c("none", "output", "all")
 ) {
-  turns <- normalize_turns(turns, system_prompt)
   model <- set_default(model, "gpt-4o")
   echo <- check_echo(echo)
 
@@ -36,13 +36,14 @@ chat_openrouter <- function(
   }
 
   provider <- ProviderOpenRouter(
+    name = "OpenRouter",
     base_url = "https://openrouter.ai/api/v1",
     model = model,
     seed = seed,
     extra_args = api_args,
     api_key = api_key
   )
-  Chat$new(provider = provider, turns = turns, echo = echo)
+  Chat$new(provider = provider, system_prompt = system_prompt, echo = echo)
 }
 
 chat_openrouter_test <- function(...) {
@@ -58,21 +59,8 @@ openrouter_key <- function() {
   key_get("OPENROUTER_API_KEY")
 }
 
-method(chat_request, ProviderOpenRouter) <- function(
-  provider,
-  stream = TRUE,
-  turns = list(),
-  tools = list(),
-  type = NULL
-) {
-  req <- chat_request(
-    super(provider, ProviderOpenAI),
-    stream = stream,
-    turns = turns,
-    tools = tools,
-    type = type
-  )
-
+method(base_request, ProviderOpenRouter) <- function(provider) {
+  req <- base_request(super(provider, ProviderOpenAI))
   # https://openrouter.ai/docs/api-keys
   req <- req_headers(
     req,
@@ -83,7 +71,11 @@ method(chat_request, ProviderOpenRouter) <- function(
   req
 }
 
-method(value_turn, ProviderOpenRouter) <- function(provider, result, has_type = FALSE) {
+method(value_turn, ProviderOpenRouter) <- function(
+  provider,
+  result,
+  has_type = FALSE
+) {
   # https://openrouter.ai/docs/errors
   check_openrouter_error(result$error)
 
@@ -95,11 +87,7 @@ method(value_turn, ProviderOpenRouter) <- function(provider, result, has_type = 
 }
 
 method(stream_parse, ProviderOpenRouter) <- function(provider, event) {
-  if (is.null(event)) {
-    cli::cli_abort("Connection closed unexpectedly")
-  }
-
-  if (identical(event$data, "[DONE]")) {
+  if (is.null(event) || identical(event$data, "[DONE]")) {
     return(NULL)
   }
 
@@ -128,7 +116,7 @@ check_openrouter_error <- function(error, call = caller_env()) {
 }
 
 method(chat_resp_stream, ProviderOpenRouter) <- function(provider, resp) {
-  repeat({
+  repeat {
     event <- resp_stream_sse(resp)
     if (is.null(event)) {
       break
@@ -139,12 +127,15 @@ method(chat_resp_stream, ProviderOpenRouter) <- function(provider, resp) {
       break
     }
     Sys.sleep(0.1)
-  })
+  }
 
   event
 }
 
-method(as_json, list(ProviderOpenRouter, ContentText)) <- function(provider, x) {
+method(as_json, list(ProviderOpenRouter, ContentText)) <- function(
+  provider,
+  x
+) {
   if (identical(x@text, "")) {
     # Tool call requests can include a Content with empty text,
     # but it doesn't like it if you send this back

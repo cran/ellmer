@@ -60,7 +60,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -401,9 +401,9 @@ languages will typically require more tokens, because (in brief) LLMs
 are trained on data from the internet, which is primarily in
 English.</p>
 <p>LLMs are priced per million tokens. State of the art models (like
-GPT-4o or Claude 3.5 sonnet) cost $2-3 per million input tokens, and
+GPT-4.1 or Claude 3.5 sonnet) cost $2-3 per million input tokens, and
 $10-15 per million output tokens. Cheaper models can cost much less,
-e.g. GPT-4o mini costs $0.15 per million input tokens and $0.60 per
+e.g. GPT-4.1 nanoo costs $0.10 per million input tokens and $0.40 per
 million output tokens. Even $10 of API credit will give you a lot of
 room for experimentation, particularly with cheaper models, and prices
 are likely to decline as model performance improves.</p>
@@ -415,21 +415,18 @@ cost grow rapidly with the number of conversational turns.</p>
 <p>In ellmer, you can see how many tokens a conversations has used by
 printing it, and you can see total usage for a session with
 <code>token_usage()</code>.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>(<span class="at">model =</span> <span class="st">&quot;gpt-4o&quot;</span>)</span>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>(<span class="at">model =</span> <span class="st">&quot;gpt-4.1&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>. <span class="ot">&lt;-</span> chat<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;Who created R?&quot;</span>, <span class="at">echo =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>chat</span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; &lt;Chat turns=2 tokens=11/52&gt;</span></span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co">#&gt; ── user ────────────────────────────────────────────────────────────────────────</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-4.1 turns=2 tokens=11/69 $0.00&gt;</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co">#&gt; ── user [11] ───────────────────────────────────────────────────────────────────</span></span>
 <span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt; Who created R?</span></span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt; ── assistant ───────────────────────────────────────────────────────────────────</span></span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; R was created by Ross Ihaka and Robert Gentleman at the University of Auckland,</span></span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt; New Zealand, in the mid-1990s. It is a free software environment for </span></span>
-<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt; statistical computing and graphics and has since become widely used among </span></span>
-<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt; statisticians and data scientists.</span></span>
-<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a></span>
-<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="fu">token_usage</span>()</span>
-<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="co">#&gt;                       name input output</span></span>
-<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="co">#&gt; 1 OpenAI-api.openai.com/v1    11     52</span></span></code></pre></div>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt; ── assistant [69] ──────────────────────────────────────────────────────────────</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; **R** was created by **Ross Ihaka** and **Robert Gentleman** at the **University of Auckland**, New Zealand, in the early 1990s. The name &quot;R&quot; comes from the first letters of their first names. R was initially developed as an implementation of the S programming language, with additional improvements and features.</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="fu">token_usage</span>()</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt;   provider   model input output price</span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="co">#&gt; 1   OpenAI gpt-4.1    11     69 $0.00</span></span></code></pre></div>
 <p>If you want to learn more about tokens and tokenizers, I’d recommend
 watching the first 20-30 minutes of <a href="https://www.youtube.com/watch?v=zduSFxRajkE">Let’s build the GPT
 Tokenizer</a> by Andrej Karpathy. You certainly don’t need to learn how
@@ -521,7 +518,7 @@ prompt stuffed with useful knowledge. For example:</p>
 <li><p>Help people use your new package. To do so, you need a custom
 prompt because LLMs were trained on data prior to your package’s
 existence. You can create a surprisingly useful tool just by preloading
-the prompt with your README and vignettes. This is how the <a href="https://github.com/jcheng5/elmer-assistant">ellmer assistant</a>
+the prompt with your README and vignettes. This is how the <a href="https://github.com/jcheng5/ellmer-assistant">ellmer assistant</a>
 works.</p></li>
 <li><p>Build language specific prompts for R and/or python. <a href="https://shiny.posit.co/blog/posts/shiny-assistant/">Shiny
 assistant</a> helps you build shiny apps (either in R or python) by
@@ -586,7 +583,7 @@ example:</p>
 <li><p>Write a detailed prompt that explains how to update code to use a
 new version of a package. You could combine this with the rstudioapi
 package to allow the user to select code, transform it, and replace it
-in the existing text. A comprehensive example of this sort of app is <a href="https://simonpcouch.github.io/pal/">pal</a>, which includes
+in the existing text. A comprehensive example of this sort of app is <a href="https://simonpcouch.github.io/chores/">chores</a>, which includes
 prompts for automatically generating roxygen documentation blocks,
 updating testthat code to the 3rd edition, and converting
 <code>stop()</code> and <code>abort()</code> to use

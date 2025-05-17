@@ -15,6 +15,7 @@
 #'   as described in <https://usethis.r-lib.org/articles/git-credentials.html>.
 #'   For headless environments, this will also look in the `GITHUB_PAT`
 #'   env var.
+#' @param model `r param_model("gpt-4o")`
 #' @export
 #' @inheritParams chat_openai
 #' @inherit chat_openai return
@@ -23,15 +24,15 @@
 #' chat <- chat_github()
 #' chat$chat("Tell me three jokes about statisticians")
 #' }
-chat_github <- function(system_prompt = NULL,
-                        turns = NULL,
-                        base_url = "https://models.inference.ai.azure.com/",
-                        api_key = github_key(),
-                        model = NULL,
-                        seed = NULL,
-                        api_args = list(),
-                        echo = NULL) {
-
+chat_github <- function(
+  system_prompt = NULL,
+  base_url = "https://models.inference.ai.azure.com/",
+  api_key = github_key(),
+  model = NULL,
+  seed = NULL,
+  api_args = list(),
+  echo = NULL
+) {
   check_installed("gitcreds")
 
   model <- set_default(model, "gpt-4o")
@@ -39,7 +40,6 @@ chat_github <- function(system_prompt = NULL,
 
   chat_openai(
     system_prompt = system_prompt,
-    turns = turns,
     base_url = base_url,
     api_key = api_key,
     model = model,

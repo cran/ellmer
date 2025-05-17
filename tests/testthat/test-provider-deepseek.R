@@ -19,22 +19,14 @@ test_that("defaults are reported", {
   expect_snapshot(. <- chat_deepseek())
 })
 
-test_that("respects turns interface", {
+test_that("all tool variations work", {
   chat_fun <- chat_deepseek
 
-  test_turns_system(chat_fun)
-  test_turns_existing(chat_fun)
+  test_tools_simple(chat_fun)
+  test_tools_async(chat_fun)
+  test_tools_parallel(chat_fun)
+  test_tools_sequential(chat_fun, total_calls = 6)
 })
-
-# Only partially works
-# test_that("all tool variations work", {
-#   chat_fun <- chat_deepseek
-
-#   test_tools_simple(chat_fun)
-#   test_tools_async(chat_fun)
-#   test_tools_parallel(chat_fun)
-#   test_tools_sequential(chat_fun, total_calls = 6)
-# })
 
 # # Doesn't support data extraction
 # test_that("can extract data", {

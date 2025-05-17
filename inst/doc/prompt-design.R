@@ -7,14 +7,15 @@ knitr::opts_chunk$set(
 )
 options(ellmer_seed = 1337)
 
-# Manually ratchet claude variability way down to hopefully make generated
-# code better match my prose.
-chat_claude <- function(...) {
-  ellmer::chat_claude(..., api_args = list(temperature = 0))
-}
-
 ## ----setup--------------------------------------------------------------------
 library(ellmer)
+
+## -----------------------------------------------------------------------------
+# Manually ratchet claude variability way down to hopefully make generated
+# code better match my prose.
+chat_anthropic <- function(...) {
+  ellmer::chat_anthropic(..., params = params(temperature = 0))
+}
 
 ## -----------------------------------------------------------------------------
 question <- "
@@ -23,37 +24,46 @@ question <- "
 "
 
 ## -----------------------------------------------------------------------------
-chat <- chat_claude()
+chat <- chat_anthropic()
 chat$chat(question)
 
 ## -----------------------------------------------------------------------------
-chat <- chat_claude(system_prompt = "
+chat <- chat_anthropic(
+  system_prompt = "
   You are an expert R programmer who prefers the tidyverse.
-")
+"
+)
 chat$chat(question)
 
 ## -----------------------------------------------------------------------------
-chat <- chat_claude(system_prompt = "
+chat <- chat_anthropic(
+  system_prompt = "
   You are an expert R programmer who prefers the tidyverse.
   Just give me the code. I don't want any explanation or sample data.
-")
+"
+)
 chat$chat(question)
 
 ## -----------------------------------------------------------------------------
-chat <- chat_claude(system_prompt = "
+chat <- chat_anthropic(
+  system_prompt = "
   You are an expert R programmer who prefers data.table.
   Just give me the code. I don't want any explanation or sample data.
-")
+"
+)
 chat$chat(question)
 
-chat <- chat_claude(system_prompt = "
+chat <- chat_anthropic(
+  system_prompt = "
   You are an expert R programmer who prefers base R.
   Just give me the code. I don't want any explanation or sample data.
-")
+"
+)
 chat$chat(question)
 
 ## -----------------------------------------------------------------------------
-chat <- chat_claude(system_prompt = "
+chat <- chat_anthropic(
+  system_prompt = "
   You are an expert R programmer who prefers the tidyverse.
   Just give me the code. I don't want any explanation or sample data.
 
@@ -63,21 +73,25 @@ chat <- chat_claude(system_prompt = "
   * Only name arguments that are less commonly used.
   * Always use double quotes for strings.
   * Use the base pipe, `|>`, not the magrittr pipe `%>%`.
-")
+"
+)
 chat$chat(question)
 
 ## -----------------------------------------------------------------------------
-chat <- chat_claude(system_prompt = "
+chat <- chat_anthropic(
+  system_prompt = "
   You are an expert R teacher.
   I am a new R user who wants to improve my programming skills.
   Help me understand the code you produce by explaining each function call with
   a brief comment. For more complicated calls, add documentation to each
   argument. Just give me the code. I don't want any explanation or sample data.
-")
+"
+)
 chat$chat(question)
 
 ## -----------------------------------------------------------------------------
-chat <- chat_claude(system_prompt = "
+chat <- chat_anthropic(
+  system_prompt = "
   You are an expert R programmer.
   Just give me the code; no explanation in text.
   Use the `.by` argument rather than `group_by()`.
@@ -94,7 +108,8 @@ chat <- chat_claude(system_prompt = "
       total = sum(revenue),
       .by = c(company, year)
     )
-")
+"
+)
 chat$chat(question)
 
 ## -----------------------------------------------------------------------------
@@ -134,7 +149,7 @@ instruct_weight <- r"(
   {"name": "ground cinnamon", "quantity": 2, "unit": "teaspoon"}
 )"
 
-chat <- chat_openai(c(instruct_json, instruct_weight))
+chat <- chat_openai(paste(instruct_json, instruct_weight))
 chat$chat(ingredients)
 
 ## -----------------------------------------------------------------------------
@@ -195,8 +210,7 @@ type_ingredient <- type_object(
 type_ingredients <- type_array(items = type_ingredient)
 
 chat <- chat_openai(c(instruct_json, instruct_weight))
-data <- chat$extract_data(ingredients, type = type_object(ingredients = type_ingredients))
-do.call(rbind, lapply(data$ingredients, as.data.frame))
+chat$chat_structured(ingredients, type = type_ingredients)
 
 ## -----------------------------------------------------------------------------
 instruct_weight_input <- r"(

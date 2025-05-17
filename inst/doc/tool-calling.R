@@ -76,3 +76,25 @@ chat$register_tool(tool(
 # #>
 # #> This is the exact time that has elapsed since Neil Armstrong's historic touchdown on the moon.
 
+## -----------------------------------------------------------------------------
+raining <- c(London = "heavy", Houston = "none", Chicago = "overcast")
+temperature <- c(London = "cool", Houston = "hot", Chicago = "warm")
+wind <- c(London = "strong", Houston = "weak", Chicago = "strong")
+
+get_weather <- function(cities) {
+  data.frame(
+    city = cities,
+    raining = unname(raining[cities]),
+    temperature = unname(temperature[cities]),
+    wind = unname(wind[cities])
+  )
+}
+chat <- chat_openai()
+chat$register_tool(tool( 
+  get_weather,
+  "Report on weather conditions in multiple cities. For efficiency, request all 
+  weather updates using a single tool call",
+  cities = type_array("City names", type_string())
+))
+chat$chat("Give me a weather udpate for London and Chicago")
+

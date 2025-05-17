@@ -60,7 +60,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -397,7 +397,124 @@ instead of a string.</p>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat_async</span>(<span class="st">&quot;How&#39;s your day going?&quot;</span>) <span class="sc">%...&gt;%</span> <span class="fu">print</span>()</span>
 <span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; I&#39;m just a computer program, so I don&#39;t have feelings, but I&#39;m here to help you with any questions you have.</span></span></code></pre></div>
-<p>TODO: Shiny example</p>
+<div id="shiny-example" class="section level4">
+<h4>Shiny example</h4>
+<p>To add an asynchronous chat interface in your Shiny application, we
+recommend using <a href="https://posit-dev.github.io/shinychat/">the
+shinychat package</a>.</p>
+<p>The simplest approach is to use shinychat’s Shiny module to add a
+chat UI to your app—similar to the app created by
+<code>live_browser()</code>—using the
+<code>shinychat::chat_mod_ui()</code> and
+<code>shinychat::chat_mod_server()</code> functions. These module
+functions connect an <code>ellmer::Chat</code> object to
+<code>shinychat::chat_ui()</code> and handle non-blocking asynchronous
+chat interactions automatically.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">library</span>(shiny)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">library</span>(shinychat)</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>ui <span class="ot">&lt;-</span> bslib<span class="sc">::</span><span class="fu">page_fillable</span>(</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="fu">chat_mod_ui</span>(<span class="st">&quot;chat&quot;</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>)</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>server <span class="ot">&lt;-</span> <span class="cf">function</span>(input, output, session) {</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>  chat <span class="ot">&lt;-</span> ellmer<span class="sc">::</span><span class="fu">chat_openai</span>(</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>    <span class="at">system_prompt =</span> <span class="st">&quot;You&#39;re a trickster who answers in riddles&quot;</span>,</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>    <span class="at">model =</span> <span class="st">&quot;gpt-4.1-nano&quot;</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>  )</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>  <span class="fu">chat_mod_server</span>(<span class="st">&quot;chat&quot;</span>, chat)</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>}</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="fu">shinyApp</span>(ui, server)</span></code></pre></div>
+<p>For fully custom streaming applications with a custom or no chat
+interface, you can use <code>shinychat::markdown_stream()</code> to
+stream responses into a Shiny app. This is particularly useful for
+creating interactive chat applications where you want to display
+responses as they are generated.</p>
+<p>The following Shiny app demonstrates <code>markdown_stream()</code>
+and uses both <code>$stream_async()</code> and
+<code>$chat_async()</code> to stream a story from an OpenAI model. In
+the app, we ask the user for a prompt to generate a story and then
+stream the story into the UI. Then we follow up by asking the model for
+a story title and we use the response to update the card title.</p>
+<p>This example also highlights the difference between streaming and
+non-streaming chat. Use <code>$stream_async()</code> with Shiny outputs
+that are designed to work with generators, like
+<code>shinychat::markdown_stream()</code> and
+<code>shinychat::chat_append()</code>. Use <code>$chat_async()</code>
+when you want the text response from the model, for example the title of
+the story.</p>
+<p>Also note that in most ellmer-powered Shiny apps, it’s best to wrap
+the chat interaction in a <code>shiny::ExtendedTask</code> to avoid
+blocking the rest of the app while the chat is being generated. You can
+learn about <code>ExtendedTask</code> in Shiny’s <a href="https://shiny.posit.co/r/articles/improve/nonblocking/"><em>Non-blocking
+operations</em> article</a>.</p>
+<pre><code>library(shiny)
+library(bslib)
+library(ellmer)
+library(promises)
+library(shinychat)
+
+ui &lt;- page_sidebar(
+  title = &quot;Interactive chat with async&quot;,
+  sidebar = sidebar(
+    textAreaInput(&quot;user_query&quot;, &quot;Tell me a story about...&quot;),
+    input_task_button(&quot;ask_chat&quot;, label = &quot;Generate a story&quot;)
+  ),
+  card(
+    card_header(textOutput(&quot;story_title&quot;)),
+    shinychat::output_markdown_stream(&quot;response&quot;),
+  )
+)
+
+server &lt;- function(input, output) {
+  chat_task &lt;- ExtendedTask$new(function(user_query) {
+    # We&#39;re using an Extended Task for chat completions to avoid blocking the
+    # app. We also start the chat fresh each time, because the UI is not a
+    # multi-turn conversation.
+    chat &lt;- chat_openai(
+      system_prompt = &quot;You are a rambling chatbot who likes to tell stories but gets distracted easily.&quot;,
+      model = &quot;gpt-4.1-nano&quot;
+    )
+
+    # Stream the chat completion into the markdown stream. `markdown_stream()`
+    # returns a promise onto which we&#39;ll chain the follow-up task of providing
+    # a story title.
+    stream &lt;- chat$stream_async(user_query)
+    stream_res &lt;- shinychat::markdown_stream(&quot;response&quot;, stream)
+
+    # Follow up by asking the LLM to provide a title for the story that we
+    # return from the task.
+    stream_res$then(function(value) {
+      chat$chat_async(
+        &quot;What is the title of the story? Reply with only the title and nothing else.&quot;
+      )
+    })
+  })
+
+  bind_task_button(chat_task, &quot;ask_chat&quot;)
+
+  observeEvent(input$ask_chat, {
+    chat_task$invoke(input$user_query)
+  })
+
+  observe({
+    # Update the card title during generation and once complete
+    switch(
+      chat_task$status(),
+      success = story_title(chat_task$result()),
+      running = story_title(&quot;Generating your story...&quot;),
+      error = story_title(&quot;An error occurred while generating your story.&quot;)
+    )
+  })
+
+  story_title &lt;- reactiveVal(&quot;Your story will appear here!&quot;)
+  output$story_title &lt;- renderText(story_title())
+}
+
+shinyApp(ui = ui, server = server)</code></pre>
+</div>
 </div>
 <div id="asynchronous-streaming" class="section level3">
 <h3>Asynchronous streaming</h3>
@@ -407,22 +524,22 @@ generator</a> from the <a href="https://coro.r-lib.org/">coro
 package</a>. This is the same as a regular <a href="https://coro.r-lib.org/articles/generator.html">generator</a>,
 except that instead of giving you strings, it gives you promises that
 resolve to strings.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>stream <span class="ot">&lt;-</span> chat<span class="sc">$</span><span class="fu">stream_async</span>(<span class="st">&quot;What are some common uses of R?&quot;</span>)</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>coro<span class="sc">::</span><span class="fu">async</span>(<span class="cf">function</span>() {</span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="cf">for</span> (chunk <span class="cf">in</span> <span class="fu">await_each</span>(stream)) {</span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>    <span class="fu">cat</span>(<span class="fu">toupper</span>(chunk))</span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  }</span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>})()</span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt;  R IS COMMONLY USED FOR:</span></span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt;</span></span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt;  1. **STATISTICAL ANALYSIS**: PERFORMING VARIOUS STATISTICAL TESTS AND MODELS.</span></span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt;  2. **DATA VISUALIZATION**: CREATING PLOTS AND GRAPHS TO VISUALIZE DATA.</span></span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt;  3. **DATA MANIPULATION**: CLEANING AND TRANSFORMING DATA WITH PACKAGES LIKE DPLYR.</span></span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt;  4. **MACHINE LEARNING**: BUILDING PREDICTIVE MODELS AND ALGORITHMS.</span></span>
-<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt;  5. **BIOINFORMATICS**: ANALYZING BIOLOGICAL DATA, ESPECIALLY IN GENOMICS.</span></span>
-<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt;  6. **TIME SERIES ANALYSIS**: ANALYZING TEMPORAL DATA FOR TRENDS AND FORECASTS.</span></span>
-<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt;  7. **REPORT GENERATION**: CREATING DYNAMIC REPORTS WITH R MARKDOWN.</span></span>
-<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt;  8. **GEOSPATIAL ANALYSIS**: MAPPING AND ANALYZING GEOGRAPHIC DATA.</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>stream <span class="ot">&lt;-</span> chat<span class="sc">$</span><span class="fu">stream_async</span>(<span class="st">&quot;What are some common uses of R?&quot;</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>coro<span class="sc">::</span><span class="fu">async</span>(<span class="cf">function</span>() {</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="cf">for</span> (chunk <span class="cf">in</span> <span class="fu">await_each</span>(stream)) {</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>    <span class="fu">cat</span>(<span class="fu">toupper</span>(chunk))</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  }</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>})()</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt;  R IS COMMONLY USED FOR:</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt;</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt;  1. **STATISTICAL ANALYSIS**: PERFORMING VARIOUS STATISTICAL TESTS AND MODELS.</span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt;  2. **DATA VISUALIZATION**: CREATING PLOTS AND GRAPHS TO VISUALIZE DATA.</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt;  3. **DATA MANIPULATION**: CLEANING AND TRANSFORMING DATA WITH PACKAGES LIKE DPLYR.</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt;  4. **MACHINE LEARNING**: BUILDING PREDICTIVE MODELS AND ALGORITHMS.</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt;  5. **BIOINFORMATICS**: ANALYZING BIOLOGICAL DATA, ESPECIALLY IN GENOMICS.</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt;  6. **TIME SERIES ANALYSIS**: ANALYZING TEMPORAL DATA FOR TRENDS AND FORECASTS.</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt;  7. **REPORT GENERATION**: CREATING DYNAMIC REPORTS WITH R MARKDOWN.</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt;  8. **GEOSPATIAL ANALYSIS**: MAPPING AND ANALYZING GEOGRAPHIC DATA.</span></span></code></pre></div>
 <p>Async generators are very advanced and require a good understanding
 of asynchronous programming in R. They are also the only way to present
 streaming results in Shiny without blocking other users. Fortunately,

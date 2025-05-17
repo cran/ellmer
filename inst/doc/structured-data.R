@@ -11,20 +11,38 @@ library(ellmer)
 
 ## -----------------------------------------------------------------------------
 chat <- chat_openai()
-chat$extract_data(
+chat$chat_structured(
   "My name is Susan and I'm 13 years old",
   type = type_object(
-    age = type_number(),
-    name = type_string()
+    name = type_string(),
+    age = type_number()
   )
 )
 
 ## -----------------------------------------------------------------------------
-chat$extract_data(
+chat$chat_structured(
   content_image_url("https://www.r-project.org/Rlogo.png"),
   type = type_object(
     primary_shape = type_string(),
     primary_colour = type_string()
+  )
+)
+
+## -----------------------------------------------------------------------------
+prompts <- list(
+  "I go by Alex. 42 years on this planet and counting.",
+  "Pleased to meet you! I'm Jamal, age 27.",
+  "They call me Li Wei. Nineteen years young.",
+  "Fatima here. Just celebrated my 35th birthday last week.",
+  "The name's Robert - 51 years old and proud of it.",
+  "Kwame here - just hit the big 5-0 this year."
+)
+parallel_chat_structured(
+  chat,  
+  prompts,
+  type = type_object(
+    name = type_string(),
+    age = type_number()
   )
 )
 
@@ -74,7 +92,7 @@ type_summary <- type_object(
 )
 
 chat <- chat_openai()
-data <- chat$extract_data(text, type = type_summary)
+data <- chat$chat_structured(text, type = type_summary)
 cat(data$summary)
 
 str(data)
@@ -93,7 +111,7 @@ type_named_entity <- type_object(
 type_named_entities <- type_array(items = type_named_entity)
 
 chat <- chat_openai()
-chat$extract_data(text, type = type_named_entities)
+chat$chat_structured(text, type = type_named_entities)
 
 ## -----------------------------------------------------------------------------
 text <- "
@@ -109,7 +127,7 @@ type_sentiment <- type_object(
 )
 
 chat <- chat_openai()
-str(chat$extract_data(text, type = type_sentiment))
+str(chat$chat_structured(text, type = type_sentiment))
 
 ## -----------------------------------------------------------------------------
 text <- "The new quantum computing breakthrough could revolutionize the tech industry."
@@ -135,7 +153,7 @@ type_classification <- type_array(
 )
 
 chat <- chat_openai()
-data <- chat$extract_data(text, type = type_classification)
+data <- chat$chat_structured(text, type = type_classification)
 data
 
 ## ----eval = ellmer:::anthropic_key_exists()-----------------------------------
@@ -152,8 +170,8 @@ prompt <- "
   </description>
 "
 
-chat <- chat_claude()
-str(chat$extract_data(prompt, type = type_characteristics))
+chat <- chat_anthropic()
+str(chat$chat_structured(prompt, type = type_characteristics))
 
 ## -----------------------------------------------------------------------------
 type_asset <- type_object(
@@ -171,7 +189,7 @@ type_assets <- type_array(items = type_asset)
 
 chat <- chat_openai()
 image <- content_image_file("congressional-assets.png")
-data <- chat$extract_data(image, type = type_assets)
+data <- chat$chat_structured(image, type = type_assets)
 data
 
 ## -----------------------------------------------------------------------------
@@ -194,7 +212,7 @@ prompt <- "
 "
 
 chat <- chat_openai()
-chat$extract_data(prompt, type = type_article)
+chat$chat_structured(prompt, type = type_article)
 str(data)
 
 ## -----------------------------------------------------------------------------
@@ -204,7 +222,7 @@ type_article <- type_object(
   author = type_string("Name of the author", required = FALSE),
   date = type_string("Date written in YYYY-MM-DD format.", required = FALSE)
 )
-chat$extract_data(prompt, type = type_article)
+chat$chat_structured(prompt, type = type_article)
 
 ## -----------------------------------------------------------------------------
 type_my_df <- type_object(

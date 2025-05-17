@@ -30,14 +30,18 @@ install.packages("ellmer")
 
 ellmer supports a wide variety of model providers:
 
-- Anthropic’s Claude: `chat_claude()`.
-- AWS Bedrock: `chat_bedrock()`.
-- Azure OpenAI: `chat_azure()`.
+- Anthropic’s Claude: `chat_anthropic()`.
+- AWS Bedrock: `chat_aws_bedrock()`.
+- Azure OpenAI: `chat_azure_openai()`.
+- Cloudflare: `chat_cloudflare()`.
 - Databricks: `chat_databricks()`.
 - DeepSeek: `chat_deepseek()`.
 - GitHub model marketplace: `chat_github()`.
-- Google Gemini: `chat_gemini()`.
+- Google Gemini/Vertex AI: `chat_google_gemini()`,
+  `chat_google_vertex()`.
 - Groq: `chat_groq()`.
+- Hugging Face: `chat_huggingface()`.
+- Mistral: `chat_mistral()`.
 - Ollama: `chat_ollama()`.
 - OpenAI: `chat_openai()`.
 - OpenRouter: `chat_openrouter()`.
@@ -49,25 +53,24 @@ ellmer supports a wide variety of model providers:
 
 If you’re using ellmer inside an organisation, you may have internal
 policies that limit you to models from big cloud providers,
-e.g. `chat_azure()`, `chat_bedrock()`, `chat_databricks()`, or
-`chat_snowflake()`.
+e.g. `chat_azure_openai()`, `chat_aws_bedrock()`, `chat_databricks()`,
+or `chat_snowflake()`.
 
 If you’re using ellmer for your own exploration, you’ll have a lot more
 freedom, so we have a few recommendations to help you get started:
 
-- `chat_openai()` or `chat_claude()` are good places to start.
-  `chat_openai()` defaults to **GPT-4o**, but you can use
-  `model = "gpt-4o-mini"` for a cheaper, lower-quality model, or
-  `model = "o1-mini"` for more complex reasoning. `chat_claude()` is
-  also good; it defaults to **Claude 3.5 Sonnet**, which we have found
-  to be particularly good at writing code.
+- `chat_openai()` or `chat_anthropic()` are good places to start.
+  `chat_openai()` defaults to **GPT-4.1**, but you can use
+  `model = "gpt-4-1-nano"` for a cheaper, faster model, or
+  `model = "o3"` for more complex reasoning. `chat_anthropic()` is also
+  good; it defaults to **Claude 3.7 Sonnet**, which we have found to be
+  particularly good at writing R code.
 
-- `chat_gemini()` is great for large prompts because it has a much
-  larger context window than other models. It allows up to 1 million
-  tokens, compared to Claude 3.5 Sonnet’s 200k and GPT-4o’s 128k. It
-  also comes with a generous free tier (with the downside that [your
-  data is used](https://ai.google.dev/gemini-api/terms#unpaid-services)
-  to improve the model).
+- `chat_google_gemini()` is a strong model with generous free tier (with
+  the downside that [your data is
+  used](https://ai.google.dev/gemini-api/terms#unpaid-services) to
+  improve the model), making it a great place to start if you don’t want
+  to spend any money.
 
 - `chat_ollama()`, which uses [Ollama](https://ollama.com), allows you
   to run models on your own computer. While the biggest models you can
@@ -84,9 +87,10 @@ that uses ellmer to another system, you’ll need to ensure that this
 environment variable is available there, too.
 
 ellmer also automatically detects many of the OAuth or IAM-based
-credentials used by the big cloud providers (currently `chat_azure()`,
-`chat_bedrock()`, `chat_databricks()`, `chat_snowflake()`). That
-includes credentials for these platforms managed by [Posit
+credentials used by the big cloud providers (currently
+`chat_azure_openai()`, `chat_aws_bedrock()`, `chat_databricks()`,
+`chat_snowflake()`). That includes credentials for these platforms
+managed by [Posit
 Workbench](https://docs.posit.co/ide/server-pro/user/posit-workbench/managed-credentials/managed-credentials.html)
 and [Posit
 Connect](https://docs.posit.co/connect/user/oauth-integrations/#adding-oauth-integrations-to-deployed-content).

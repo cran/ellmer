@@ -101,9 +101,16 @@ TypeObject <- new_class(
 #'   used by the LLM to determine what values to pass to the tool or what
 #'   values to extract in the structured data, so the more detail that you can
 #'   provide here, the better.
-#' @param required,.required Is the component required? If `FALSE`, and the
-#'   component does not exist in the data, the LLM may hallucinate a value.
-#'   Only applies when the element is nested inside of a `type_object()`.
+#' @param required,.required Is the component or argument required?
+#'
+#'   In type descriptions for structured data, if `required = FALSE` and the
+#'   component does not exist in the data, the LLM may hallucinate a value. Only
+#'   applies when the element is nested inside of a `type_object()`.
+#'
+#'   In tool definitions, `required = TRUE` signals that the LLM should always
+#'   provide a value. Arguments with `required = FALSE` should have a default
+#'   value in the tool function's definition. If the LLM does not provide a
+#'   value, the default value will be used.
 #' @export
 #' @examples
 #' # An integer vector
@@ -161,49 +168,16 @@ type_array <- function(description = NULL, items, required = TRUE) {
 #'   properties that are not explicitly listed? Only supported by Claude.
 #' @export
 #' @rdname type_boolean
-type_object <- function(.description = NULL,
-                        ...,
-                        .required = TRUE,
-                        .additional_properties = FALSE) {
+type_object <- function(
+  .description = NULL,
+  ...,
+  .required = TRUE,
+  .additional_properties = FALSE
+) {
   TypeObject(
     properties = list2(...),
     description = .description,
     required = .required,
     additional_properties = .additional_properties
   )
-}
-
-
-convert_from_type <- function(x, type) {
-  if (S7_inherits(type, TypeArray)) {
-    if (S7_inherits(type@items, TypeBasic)) {
-      switch(type@items@type,
-        boolean = as.logical(x),
-        integer = as.integer(x),
-        number = as.numeric(x),
-        string = as.character(x),
-        cli::cli_abort("Unknown type {type@items@type}", .internal = TRUE)
-      )
-    } else if (S7_inherits(type@items, TypeArray)) {
-      lapply(x, function(y) convert_from_type(y, type@items))
-    } else if (S7_inherits(type@items, TypeEnum)) {
-      factor(as.character(x), levels = type@items@values)
-    } else if (S7_inherits(type@items, TypeObject)) {
-      cols <- lapply(names(type@items@properties), function(name) {
-        vals <- lapply(x, function(y) y[[name]])
-        convert_from_type(vals, type_array(items = type@items@properties[[name]]))
-      })
-      names(cols) <- names(type@items@properties)
-      list2DF(cols)
-    } else {
-      x
-    }
-  } else if (S7_inherits(type, TypeObject)) {
-    out <- lapply(names(type@properties), function(name) {
-      convert_from_type(x[[name]], type@properties[[name]])
-    })
-    set_names(out, names(type@properties))
-  } else {
-    x
-  }
 }
