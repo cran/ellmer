@@ -374,7 +374,7 @@ modifying them:</p>
 <span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; Paris</span></span>
 <span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a></span>
 <span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>chat</span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-4.1-nano turns=5 tokens=53/4 $0.00&gt;</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-4.1-nano turns=5 tokens=53/3 $0.00&gt;</span></span>
 <span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt; ── system [0] ──────────────────────────────────────────────────────────────────</span></span>
 <span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; Be terse</span></span>
 <span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt; ── user [19] ───────────────────────────────────────────────────────────────────</span></span>
@@ -383,7 +383,7 @@ modifying them:</p>
 <span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; Wellington</span></span>
 <span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="co">#&gt; ── user [13] ───────────────────────────────────────────────────────────────────</span></span>
 <span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt; What&#39;s the capital of France</span></span>
-<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt; ── assistant [2] ───────────────────────────────────────────────────────────────</span></span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt; ── assistant [1] ───────────────────────────────────────────────────────────────</span></span>
 <span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt; Paris</span></span></code></pre></div>
 <p>It would be annoying if chat objects were immutable, because then
 you’d need to save the result every time you chatted with the model. But
@@ -412,37 +412,37 @@ conversational “tree”, where conversations start from the same place,
 but diverge over time:</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>chat1 <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>(<span class="st">&quot;Be terse&quot;</span>, <span class="at">model =</span> <span class="st">&quot;gpt-4.1-nano&quot;</span>)</span>
 <span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>chat1<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;My name is Hadley and I&#39;m a data scientist&quot;</span>)</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt; Hi Hadley. How can I help?</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt; Nice to meet you, Hadley. How can I assist?</span></span>
 <span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>chat2 <span class="ot">&lt;-</span> chat1<span class="sc">$</span><span class="fu">clone</span>()</span>
 <span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a></span>
 <span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>chat1<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;what&#39;s my name?&quot;</span>)</span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; Hadley</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; Your name is Hadley.</span></span>
 <span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>chat1</span>
-<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-4.1-nano turns=5 tokens=68/11 $0.00&gt;</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-4.1-nano turns=5 tokens=72/19 $0.00&gt;</span></span>
 <span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt; ── system [0] ──────────────────────────────────────────────────────────────────</span></span>
 <span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt; Be terse</span></span>
 <span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; ── user [23] ───────────────────────────────────────────────────────────────────</span></span>
 <span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; My name is Hadley and I&#39;m a data scientist</span></span>
-<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; ── assistant [9] ───────────────────────────────────────────────────────────────</span></span>
-<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; Hi Hadley. How can I help?</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; ── assistant [13] ──────────────────────────────────────────────────────────────</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; Nice to meet you, Hadley. How can I assist?</span></span>
 <span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt; ── user [13] ───────────────────────────────────────────────────────────────────</span></span>
 <span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt; what&#39;s my name?</span></span>
-<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt; ── assistant [2] ───────────────────────────────────────────────────────────────</span></span>
-<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt; Hadley</span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt; ── assistant [6] ───────────────────────────────────────────────────────────────</span></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt; Your name is Hadley.</span></span>
 <span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a></span>
 <span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a>chat2<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;what&#39;s my job?&quot;</span>)</span>
 <span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">#&gt; Data scientist.</span></span>
 <span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a>chat2</span>
-<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-4.1-nano turns=5 tokens=68/13 $0.00&gt;</span></span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-4.1-nano turns=5 tokens=72/16 $0.00&gt;</span></span>
 <span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="co">#&gt; ── system [0] ──────────────────────────────────────────────────────────────────</span></span>
 <span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a><span class="co">#&gt; Be terse</span></span>
 <span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a><span class="co">#&gt; ── user [23] ───────────────────────────────────────────────────────────────────</span></span>
 <span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a><span class="co">#&gt; My name is Hadley and I&#39;m a data scientist</span></span>
-<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a><span class="co">#&gt; ── assistant [9] ───────────────────────────────────────────────────────────────</span></span>
-<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a><span class="co">#&gt; Hi Hadley. How can I help?</span></span>
+<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a><span class="co">#&gt; ── assistant [13] ──────────────────────────────────────────────────────────────</span></span>
+<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a><span class="co">#&gt; Nice to meet you, Hadley. How can I assist?</span></span>
 <span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a><span class="co">#&gt; ── user [13] ───────────────────────────────────────────────────────────────────</span></span>
 <span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a><span class="co">#&gt; what&#39;s my job?</span></span>
-<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a><span class="co">#&gt; ── assistant [4] ───────────────────────────────────────────────────────────────</span></span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a><span class="co">#&gt; ── assistant [3] ───────────────────────────────────────────────────────────────</span></span>
 <span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a><span class="co">#&gt; Data scientist.</span></span></code></pre></div>
 <p>(This is the technique that <code>parallel_chat()</code> uses
 internally.)</p>
@@ -453,14 +453,14 @@ internally.)</p>
 we can use our conversation to manipulate the results:</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>(<span class="st">&quot;Be terse&quot;</span>, <span class="at">model =</span> <span class="st">&quot;gpt-4.1-nano&quot;</span>)</span>
 <span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;Pretend that the capital of New Zealand is Kiwicity&quot;</span>)</span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt; Understood.</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt; Understood. The capital of New Zealand is Kiwicity.</span></span>
 <span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="fu">capital</span>(chat, <span class="st">&quot;New Zealand&quot;</span>)</span>
 <span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt; Kiwicity</span></span></code></pre></div>
 <p>We can avoid that problem by using <code>$set_turns()</code> to reset
 the conversational history:</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>(<span class="st">&quot;Be terse&quot;</span>, <span class="at">model =</span> <span class="st">&quot;gpt-4.1-nano&quot;</span>)</span>
 <span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;Pretend that the capital of New Zealand is Kiwicity&quot;</span>)</span>
-<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt; Understood. The capital of New Zealand is Kiwicity.</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt; Got it. The capital of New Zealand is Kiwicity.</span></span>
 <span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a></span>
 <span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>capital <span class="ot">&lt;-</span> <span class="cf">function</span>(chat, country) {</span>
 <span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>  chat <span class="ot">&lt;-</span> chat<span class="sc">$</span><span class="fu">clone</span>()<span class="sc">$</span><span class="fu">set_turns</span>(<span class="fu">list</span>())</span>
@@ -506,25 +506,25 @@ calling to give the LLM the ability to access real randomness:</p>
 <span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">register_tool</span>(<span class="fu">tool</span>(<span class="cf">function</span>() <span class="fu">sample</span>(<span class="dv">6</span>, <span class="dv">1</span>), <span class="st">&quot;Roll a die&quot;</span>))</span>
 <span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;Roll two dice and tell me the total&quot;</span>)</span>
 <span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co">#&gt; ◯ [tool call] tool_001()</span></span>
-<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co">#&gt; ● #&gt; 2</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co">#&gt; ● #&gt; 5</span></span>
 <span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co">#&gt; ◯ [tool call] tool_001()</span></span>
-<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt; ● #&gt; 1</span></span>
-<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt; The total is 3.</span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt; ● #&gt; 3</span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt; The total is 8.</span></span>
 <span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a></span>
 <span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>chat</span>
-<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-4.1-nano turns=5 tokens=151/50 $0.00&gt;</span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-4.1-nano turns=5 tokens=151/48 $0.00&gt;</span></span>
 <span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt; ── system [0] ──────────────────────────────────────────────────────────────────</span></span>
 <span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt; Be terse</span></span>
 <span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt; ── user [47] ───────────────────────────────────────────────────────────────────</span></span>
 <span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt; Roll two dice and tell me the total</span></span>
-<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt; ── assistant [42] ──────────────────────────────────────────────────────────────</span></span>
-<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt; [tool request (call_GX90sCdm6q0ZmDyPIvFnFcyE)]: tool_001()</span></span>
-<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt; [tool request (call_g2CARq9sl5qWBHIfVjD1chIy)]: tool_001()</span></span>
-<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt; ── user [15] ───────────────────────────────────────────────────────────────────</span></span>
-<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt; [tool result  (call_GX90sCdm6q0ZmDyPIvFnFcyE)]: 2</span></span>
-<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt; [tool result  (call_g2CARq9sl5qWBHIfVjD1chIy)]: 1</span></span>
-<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt; ── assistant [8] ───────────────────────────────────────────────────────────────</span></span>
-<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt; The total is 3.</span></span></code></pre></div>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt; ── assistant [41] ──────────────────────────────────────────────────────────────</span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt; [tool request (call_BwtCUMoZPg2gsFXK2dDIs4ML)]: tool_001()</span></span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt; [tool request (call_1sbPdDSpQPoYjcMyA70QNtOV)]: tool_001()</span></span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt; ── user [16] ───────────────────────────────────────────────────────────────────</span></span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt; [tool result  (call_BwtCUMoZPg2gsFXK2dDIs4ML)]: 5</span></span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt; [tool result  (call_1sbPdDSpQPoYjcMyA70QNtOV)]: 3</span></span>
+<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt; ── assistant [7] ───────────────────────────────────────────────────────────────</span></span>
+<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt; The total is 8.</span></span></code></pre></div>
 <p>You can get access to the underlying conversational turns with
 <code>get_turns()</code>:</p>
 <div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>turns <span class="ot">&lt;-</span> chat<span class="sc">$</span><span class="fu">get_turns</span>()</span>
@@ -535,17 +535,17 @@ calling to give the LLM the ability to access real randomness:</p>
 <span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co">#&gt; [[2]]</span></span>
 <span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; &lt;Turn: assistant&gt;</span></span>
-<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="co">#&gt; [tool request (call_GX90sCdm6q0ZmDyPIvFnFcyE)]: tool_001()</span></span>
-<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co">#&gt; [tool request (call_g2CARq9sl5qWBHIfVjD1chIy)]: tool_001()</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="co">#&gt; [tool request (call_BwtCUMoZPg2gsFXK2dDIs4ML)]: tool_001()</span></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co">#&gt; [tool request (call_1sbPdDSpQPoYjcMyA70QNtOV)]: tool_001()</span></span>
 <span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="co">#&gt; [[3]]</span></span>
 <span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a><span class="co">#&gt; &lt;Turn: user&gt;</span></span>
-<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a><span class="co">#&gt; [tool result  (call_GX90sCdm6q0ZmDyPIvFnFcyE)]: 2</span></span>
-<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a><span class="co">#&gt; [tool result  (call_g2CARq9sl5qWBHIfVjD1chIy)]: 1</span></span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a><span class="co">#&gt; [tool result  (call_BwtCUMoZPg2gsFXK2dDIs4ML)]: 5</span></span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a><span class="co">#&gt; [tool result  (call_1sbPdDSpQPoYjcMyA70QNtOV)]: 3</span></span>
 <span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a><span class="co">#&gt; [[4]]</span></span>
 <span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a><span class="co">#&gt; &lt;Turn: assistant&gt;</span></span>
-<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a><span class="co">#&gt; The total is 3.</span></span></code></pre></div>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a><span class="co">#&gt; The total is 8.</span></span></code></pre></div>
 <p>If you look at one of the assistant turns in detail, you’ll see that
 it includes ellmer’s representation of content of the message, as well
 as the exact json that the provider returned:</p>
@@ -554,7 +554,7 @@ as the exact json that the provider returned:</p>
 <span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co">#&gt;  @ role    : chr &quot;assistant&quot;</span></span>
 <span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co">#&gt;  @ contents:List of 2</span></span>
 <span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="co">#&gt;  .. $ : &lt;ellmer::ContentToolRequest&gt;</span></span>
-<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#&gt;  ..  ..@ id       : chr &quot;call_GX90sCdm6q0ZmDyPIvFnFcyE&quot;</span></span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#&gt;  ..  ..@ id       : chr &quot;call_BwtCUMoZPg2gsFXK2dDIs4ML&quot;</span></span>
 <span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="co">#&gt;  ..  ..@ name     : chr &quot;tool_001&quot;</span></span>
 <span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt;  ..  ..@ arguments: Named list()</span></span>
 <span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="co">#&gt;  ..  ..@ tool     : &lt;ellmer::ToolDef&gt;</span></span>
@@ -569,7 +569,7 @@ as the exact json that the provider returned:</p>
 <span id="cb11-18"><a href="#cb11-18" tabindex="-1"></a><span class="co">#&gt;  .. .. .. @ convert    : logi TRUE</span></span>
 <span id="cb11-19"><a href="#cb11-19" tabindex="-1"></a><span class="co">#&gt;  .. .. .. @ annotations: list()</span></span>
 <span id="cb11-20"><a href="#cb11-20" tabindex="-1"></a><span class="co">#&gt;  .. $ : &lt;ellmer::ContentToolRequest&gt;</span></span>
-<span id="cb11-21"><a href="#cb11-21" tabindex="-1"></a><span class="co">#&gt;  ..  ..@ id       : chr &quot;call_g2CARq9sl5qWBHIfVjD1chIy&quot;</span></span>
+<span id="cb11-21"><a href="#cb11-21" tabindex="-1"></a><span class="co">#&gt;  ..  ..@ id       : chr &quot;call_1sbPdDSpQPoYjcMyA70QNtOV&quot;</span></span>
 <span id="cb11-22"><a href="#cb11-22" tabindex="-1"></a><span class="co">#&gt;  ..  ..@ name     : chr &quot;tool_001&quot;</span></span>
 <span id="cb11-23"><a href="#cb11-23" tabindex="-1"></a><span class="co">#&gt;  ..  ..@ arguments: Named list()</span></span>
 <span id="cb11-24"><a href="#cb11-24" tabindex="-1"></a><span class="co">#&gt;  ..  ..@ tool     : &lt;ellmer::ToolDef&gt;</span></span>
@@ -584,16 +584,16 @@ as the exact json that the provider returned:</p>
 <span id="cb11-33"><a href="#cb11-33" tabindex="-1"></a><span class="co">#&gt;  .. .. .. @ convert    : logi TRUE</span></span>
 <span id="cb11-34"><a href="#cb11-34" tabindex="-1"></a><span class="co">#&gt;  .. .. .. @ annotations: list()</span></span>
 <span id="cb11-35"><a href="#cb11-35" tabindex="-1"></a><span class="co">#&gt;  @ json    :List of 8</span></span>
-<span id="cb11-36"><a href="#cb11-36" tabindex="-1"></a><span class="co">#&gt;  .. $ id                : chr &quot;chatcmpl-BXvLNXTcVj4JnbWoXD5MM38THCn4x&quot;</span></span>
+<span id="cb11-36"><a href="#cb11-36" tabindex="-1"></a><span class="co">#&gt;  .. $ id                : chr &quot;chatcmpl-BeM86kriinrNtDadyCJsFvGjFB3MY&quot;</span></span>
 <span id="cb11-37"><a href="#cb11-37" tabindex="-1"></a><span class="co">#&gt;  .. $ object            : chr &quot;chat.completion.chunk&quot;</span></span>
-<span id="cb11-38"><a href="#cb11-38" tabindex="-1"></a><span class="co">#&gt;  .. $ created           : int 1747424953</span></span>
+<span id="cb11-38"><a href="#cb11-38" tabindex="-1"></a><span class="co">#&gt;  .. $ created           : int 1748957886</span></span>
 <span id="cb11-39"><a href="#cb11-39" tabindex="-1"></a><span class="co">#&gt;  .. $ model             : chr &quot;gpt-4.1-nano-2025-04-14&quot;</span></span>
 <span id="cb11-40"><a href="#cb11-40" tabindex="-1"></a><span class="co">#&gt;  .. $ service_tier      : chr &quot;default&quot;</span></span>
-<span id="cb11-41"><a href="#cb11-41" tabindex="-1"></a><span class="co">#&gt;  .. $ system_fingerprint: chr &quot;fp_eede8f0d45&quot;</span></span>
+<span id="cb11-41"><a href="#cb11-41" tabindex="-1"></a><span class="co">#&gt;  .. $ system_fingerprint: chr &quot;fp_38343a2f8f&quot;</span></span>
 <span id="cb11-42"><a href="#cb11-42" tabindex="-1"></a><span class="co">#&gt;  .. $ usage             :List of 5</span></span>
 <span id="cb11-43"><a href="#cb11-43" tabindex="-1"></a><span class="co">#&gt;  ..  ..$ prompt_tokens            : int 47</span></span>
-<span id="cb11-44"><a href="#cb11-44" tabindex="-1"></a><span class="co">#&gt;  ..  ..$ completion_tokens        : int 42</span></span>
-<span id="cb11-45"><a href="#cb11-45" tabindex="-1"></a><span class="co">#&gt;  ..  ..$ total_tokens             : int 89</span></span>
+<span id="cb11-44"><a href="#cb11-44" tabindex="-1"></a><span class="co">#&gt;  ..  ..$ completion_tokens        : int 41</span></span>
+<span id="cb11-45"><a href="#cb11-45" tabindex="-1"></a><span class="co">#&gt;  ..  ..$ total_tokens             : int 88</span></span>
 <span id="cb11-46"><a href="#cb11-46" tabindex="-1"></a><span class="co">#&gt;  ..  ..$ prompt_tokens_details    :List of 2</span></span>
 <span id="cb11-47"><a href="#cb11-47" tabindex="-1"></a><span class="co">#&gt;  ..  .. ..$ cached_tokens: int 0</span></span>
 <span id="cb11-48"><a href="#cb11-48" tabindex="-1"></a><span class="co">#&gt;  ..  .. ..$ audio_tokens : int 0</span></span>
@@ -611,21 +611,21 @@ as the exact json that the provider returned:</p>
 <span id="cb11-60"><a href="#cb11-60" tabindex="-1"></a><span class="co">#&gt;  ..  .. .. ..$ tool_calls:List of 2</span></span>
 <span id="cb11-61"><a href="#cb11-61" tabindex="-1"></a><span class="co">#&gt;  ..  .. .. .. ..$ :List of 4</span></span>
 <span id="cb11-62"><a href="#cb11-62" tabindex="-1"></a><span class="co">#&gt;  ..  .. .. .. .. ..$ index   : int 0</span></span>
-<span id="cb11-63"><a href="#cb11-63" tabindex="-1"></a><span class="co">#&gt;  ..  .. .. .. .. ..$ id      : chr &quot;call_GX90sCdm6q0ZmDyPIvFnFcyE&quot;</span></span>
+<span id="cb11-63"><a href="#cb11-63" tabindex="-1"></a><span class="co">#&gt;  ..  .. .. .. .. ..$ id      : chr &quot;call_BwtCUMoZPg2gsFXK2dDIs4ML&quot;</span></span>
 <span id="cb11-64"><a href="#cb11-64" tabindex="-1"></a><span class="co">#&gt;  ..  .. .. .. .. ..$ type    : chr &quot;function&quot;</span></span>
 <span id="cb11-65"><a href="#cb11-65" tabindex="-1"></a><span class="co">#&gt;  ..  .. .. .. .. ..$ function:List of 2</span></span>
 <span id="cb11-66"><a href="#cb11-66" tabindex="-1"></a><span class="co">#&gt;  ..  .. .. .. .. .. ..$ name     : chr &quot;tool_001&quot;</span></span>
 <span id="cb11-67"><a href="#cb11-67" tabindex="-1"></a><span class="co">#&gt;  ..  .. .. .. .. .. ..$ arguments: chr &quot;{}&quot;</span></span>
 <span id="cb11-68"><a href="#cb11-68" tabindex="-1"></a><span class="co">#&gt;  ..  .. .. .. ..$ :List of 4</span></span>
 <span id="cb11-69"><a href="#cb11-69" tabindex="-1"></a><span class="co">#&gt;  ..  .. .. .. .. ..$ index   : int 1</span></span>
-<span id="cb11-70"><a href="#cb11-70" tabindex="-1"></a><span class="co">#&gt;  ..  .. .. .. .. ..$ id      : chr &quot;call_g2CARq9sl5qWBHIfVjD1chIy&quot;</span></span>
+<span id="cb11-70"><a href="#cb11-70" tabindex="-1"></a><span class="co">#&gt;  ..  .. .. .. .. ..$ id      : chr &quot;call_1sbPdDSpQPoYjcMyA70QNtOV&quot;</span></span>
 <span id="cb11-71"><a href="#cb11-71" tabindex="-1"></a><span class="co">#&gt;  ..  .. .. .. .. ..$ type    : chr &quot;function&quot;</span></span>
 <span id="cb11-72"><a href="#cb11-72" tabindex="-1"></a><span class="co">#&gt;  ..  .. .. .. .. ..$ function:List of 2</span></span>
 <span id="cb11-73"><a href="#cb11-73" tabindex="-1"></a><span class="co">#&gt;  ..  .. .. .. .. .. ..$ name     : chr &quot;tool_001&quot;</span></span>
 <span id="cb11-74"><a href="#cb11-74" tabindex="-1"></a><span class="co">#&gt;  ..  .. .. .. .. .. ..$ arguments: chr &quot;{}&quot;</span></span>
 <span id="cb11-75"><a href="#cb11-75" tabindex="-1"></a><span class="co">#&gt;  ..  .. ..$ logprobs     : NULL</span></span>
 <span id="cb11-76"><a href="#cb11-76" tabindex="-1"></a><span class="co">#&gt;  ..  .. ..$ finish_reason: chr &quot;tool_calls&quot;</span></span>
-<span id="cb11-77"><a href="#cb11-77" tabindex="-1"></a><span class="co">#&gt;  @ tokens  : int [1:2] 47 42</span></span>
+<span id="cb11-77"><a href="#cb11-77" tabindex="-1"></a><span class="co">#&gt;  @ tokens  : int [1:2] 47 41</span></span>
 <span id="cb11-78"><a href="#cb11-78" tabindex="-1"></a><span class="co">#&gt;  @ text    : chr &quot;&quot;</span></span></code></pre></div>
 <p>You can use the <code>@json</code> to extract additional information
 that ellmer might not yet provide to you, but be aware that the

@@ -381,10 +381,10 @@ specific values from a string:</p>
 <span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  )</span>
 <span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>)</span>
 <span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; $primary_shape</span></span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; [1] &quot;a large letter &#39;R&#39; with an oval/ring shape behind it&quot;</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; [1] &quot;the image consists of a large gray oval with a bold blue letter &#39;R&#39; overlaid on it&quot;</span></span>
 <span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; $primary_colour</span></span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; [1] &quot;blue and gray&quot;</span></span></code></pre></div>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; [1] &quot;gray (oval), blue (letter R)&quot;</span></span></code></pre></div>
 <p>If you need to extract data from multiple prompts, you can use the
 same techniques with <code>parallel_chat_structured()</code>. It takes
 the same arguments as <code>$chat_structured()</code> with two
@@ -406,7 +406,7 @@ function, not a method, and it can take a vector of prompts.</p>
 <span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>    <span class="at">age =</span> <span class="fu">type_number</span>()</span>
 <span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>  )</span>
 <span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>)</span>
-<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt; [working] (0 + 0) -&gt; 4 -&gt; 2 | ■■■■■■■■■■■                       33%</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt; [working] (0 + 0) -&gt; 5 -&gt; 1 | ■■■■■■                            17%</span></span>
 <span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; [working] (0 + 0) -&gt; 0 -&gt; 6 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%</span></span>
 <span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt;     name age</span></span>
 <span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt; 1   Alex  42</span></span>
@@ -505,17 +505,17 @@ can use structured data extraction.</p>
 <span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
 <span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a>data <span class="ot">&lt;-</span> chat<span class="sc">$</span><span class="fu">chat_structured</span>(text, <span class="at">type =</span> type_summary)</span>
 <span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="fu">cat</span>(data<span class="sc">$</span>summary)</span>
-<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt; This article advocates for the implementation of robust, third-party testing regimes as a foundation of effective AI policy. The central premise is that frontier AI systems, such as large-scale generative models, present unique safety and misuse risks that are not sufficiently addressed by current sector-specific regulations or by company self-governance. As AI models become more capable and ubiquitous, a trustworthy, externally administered system for evaluating their behavior and limiting risks (including election integrity, discrimination, national security, and more) is critical for avoiding societal harm and knee-jerk regulatory responses.</span></span>
+<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt; This article argues that effective, broadly trusted third-party testing and evaluation regimes are essential for the safe deployment and governance of frontier AI systems. Anthropic proposes that self-governance and company-led safety policies, like their Responsible Scaling Policy (RSP), are necessary but not sufficient; independent, third-party testing—spanning government agencies, academia, and private contractors—is needed to ensure AI models do not cause accidental or deliberate harm. The article details reasons for needing such a regime, including AI&#39;s general-purpose nature, emergent risks, and the precedent from other sectors (food, medicine, etc.). </span></span>
 <span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt; The article outlines the key components of an effective testing regime — trusted third parties, well-defined tests, appropriate scoping to avoid stifling innovation, and international coordination. It also addresses challenges concerning open-source models and regulatory capture, advocating for precautions to balance innovation with societal safety. Anthropic, while outlining its own Responsible Scaling Policy, positions itself as a supporter of developing this testing ecosystem through industry, academic, and governmental collaborations. The ultimate policy goal is a minimal, practical, and broadly accepted oversight structure that protects society while keeping the AI field open and competitive.</span></span>
+<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt; Anthropic outlines the principles for creating fair and effective third-party testing systems: precise scope to avoid over-burdening small companies, application mainly to high-compute frontier models, and the inclusion of various actors (government, academia, private). They emphasize that such a system will help avoid catastrophic incidents and knee-jerk regulation, foster public trust, and mitigate risks like regulatory capture and undue barriers to competition. The article also discusses the importance of openly accessible models, scenario planning, and the challenges around regulation and open-source AI. Anthropic commits to proactive steps: prototyping testing, red teaming, supporting government funding of institutions like NIST, and advocating for balanced, minimal but effective policy. Ultimately, they view third-party testing as a cornerstone for responsible AI oversight and hope to inspire broader societal standards and critique.</span></span>
 <span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a></span>
 <span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="fu">str</span>(data)</span>
 <span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a><span class="co">#&gt; List of 5</span></span>
-<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="co">#&gt;  $ author    : chr &quot;Anthropic Policy Team (assumed from context)&quot;</span></span>
-<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="co">#&gt;  $ topics    : chr [1:10] &quot;AI policy&quot; &quot;third-party testing&quot; &quot;AI safety&quot; &quot;regulation&quot; ...</span></span>
-<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a><span class="co">#&gt;  $ summary   : chr &quot;This article advocates for the implementation of robust, third-party testing regimes as a foundation of effecti&quot;| __truncated__</span></span>
-<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a><span class="co">#&gt;  $ coherence : int 95</span></span>
-<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a><span class="co">#&gt;  $ persuasion: num 0.87</span></span></code></pre></div>
+<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="co">#&gt;  $ author    : chr &quot;Anthropic Policy Team (unspecified individual)&quot;</span></span>
+<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="co">#&gt;  $ topics    : chr [1:11] &quot;AI policy&quot; &quot;third-party testing&quot; &quot;AI safety&quot; &quot;regulation&quot; ...</span></span>
+<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a><span class="co">#&gt;  $ summary   : chr &quot;This article argues that effective, broadly trusted third-party testing and evaluation regimes are essential fo&quot;| __truncated__</span></span>
+<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a><span class="co">#&gt;  $ coherence : int 92</span></span>
+<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a><span class="co">#&gt;  $ persuasion: num 0.82</span></span></code></pre></div>
 </div>
 <div id="example-2-named-entity-recognition" class="section level3">
 <h3>Example 2: Named entity recognition</h3>
@@ -534,13 +534,20 @@ can use structured data extraction.</p>
 <span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
 <span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
 <span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat_structured</span>(text, <span class="at">type =</span> type_named_entities)</span>
-<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a><span class="co">#&gt;            name         type                                           context</span></span>
-<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a><span class="co">#&gt; 1          John       person    An individual who works at Google in New York.</span></span>
-<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a><span class="co">#&gt; 2        Google organization                 An organization where John works.</span></span>
-<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a><span class="co">#&gt; 3      New York     location          The location where John works at Google.</span></span>
-<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a><span class="co">#&gt; 4         Sarah       person           The CEO of Acme Inc. who met with John.</span></span>
-<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a><span class="co">#&gt; 5     Acme Inc. organization      The organization for which Sarah is the CEO.</span></span>
-<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a><span class="co">#&gt; 6 San Francisco     location The location where John met with Sarah last week.</span></span></code></pre></div>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a><span class="co">#&gt;            name         type</span></span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a><span class="co">#&gt; 1          John       person</span></span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a><span class="co">#&gt; 2        Google organization</span></span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a><span class="co">#&gt; 3      New York     location</span></span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a><span class="co">#&gt; 4         Sarah       person</span></span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a><span class="co">#&gt; 5     Acme Inc. organization</span></span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a><span class="co">#&gt; 6 San Francisco     location</span></span>
+<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a><span class="co">#&gt;                                                              context</span></span>
+<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a><span class="co">#&gt; 1                John is mentioned as working at Google in New York.</span></span>
+<span id="cb10-25"><a href="#cb10-25" tabindex="-1"></a><span class="co">#&gt; 2               Google is mentioned as the company where John works.</span></span>
+<span id="cb10-26"><a href="#cb10-26" tabindex="-1"></a><span class="co">#&gt; 3      New York is mentioned as the city where John works at Google.</span></span>
+<span id="cb10-27"><a href="#cb10-27" tabindex="-1"></a><span class="co">#&gt; 4         Sarah is mentioned as the CEO of Acme Inc., whom John met.</span></span>
+<span id="cb10-28"><a href="#cb10-28" tabindex="-1"></a><span class="co">#&gt; 5      Acme Inc. is mentioned as the company where Sarah is the CEO.</span></span>
+<span id="cb10-29"><a href="#cb10-29" tabindex="-1"></a><span class="co">#&gt; 6 San Francisco is mentioned as the place where John met with Sarah.</span></span></code></pre></div>
 </div>
 <div id="example-3-sentiment-analysis" class="section level3">
 <h3>Example 3: Sentiment analysis</h3>
@@ -560,8 +567,8 @@ can use structured data extraction.</p>
 <span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
 <span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a><span class="fu">str</span>(chat<span class="sc">$</span><span class="fu">chat_structured</span>(text, <span class="at">type =</span> type_sentiment))</span>
 <span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a><span class="co">#&gt; List of 3</span></span>
-<span id="cb11-17"><a href="#cb11-17" tabindex="-1"></a><span class="co">#&gt;  $ positive_score: num 0.1</span></span>
-<span id="cb11-18"><a href="#cb11-18" tabindex="-1"></a><span class="co">#&gt;  $ negative_score: num 0.7</span></span>
+<span id="cb11-17"><a href="#cb11-17" tabindex="-1"></a><span class="co">#&gt;  $ positive_score: num 0.05</span></span>
+<span id="cb11-18"><a href="#cb11-18" tabindex="-1"></a><span class="co">#&gt;  $ negative_score: num 0.75</span></span>
 <span id="cb11-19"><a href="#cb11-19" tabindex="-1"></a><span class="co">#&gt;  $ neutral_score : num 0.2</span></span></code></pre></div>
 <p>Note that while we’ve asked nicely for the scores to sum 1, which
 they do in this example (at least when I ran the code), this is not
@@ -596,8 +603,7 @@ guaranteed.</p>
 <span id="cb12-25"><a href="#cb12-25" tabindex="-1"></a>data <span class="ot">&lt;-</span> chat<span class="sc">$</span><span class="fu">chat_structured</span>(text, <span class="at">type =</span> type_classification)</span>
 <span id="cb12-26"><a href="#cb12-26" tabindex="-1"></a>data</span>
 <span id="cb12-27"><a href="#cb12-27" tabindex="-1"></a><span class="co">#&gt;         name score</span></span>
-<span id="cb12-28"><a href="#cb12-28" tabindex="-1"></a><span class="co">#&gt; 1 Technology  0.95</span></span>
-<span id="cb12-29"><a href="#cb12-29" tabindex="-1"></a><span class="co">#&gt; 2   Business  0.05</span></span></code></pre></div>
+<span id="cb12-28"><a href="#cb12-28" tabindex="-1"></a><span class="co">#&gt; 1 Technology     1</span></span></code></pre></div>
 </div>
 <div id="example-5-working-with-unknown-keys" class="section level3">
 <h3>Example 5: Working with unknown keys</h3>
@@ -615,7 +621,7 @@ guaranteed.</p>
 <span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a><span class="st">&quot;</span></span>
 <span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a></span>
 <span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_anthropic</span>()</span>
-<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-3-7-sonnet-latest&quot;.</span></span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-4-20250514&quot;.</span></span>
 <span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a><span class="fu">str</span>(chat<span class="sc">$</span><span class="fu">chat_structured</span>(prompt, <span class="at">type =</span> type_characteristics))</span>
 <span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a><span class="co">#&gt;  list()</span></span></code></pre></div>
 <p>This example only works with Claude, not GPT or Gemini, because only
@@ -650,9 +656,9 @@ and “unearned” income</div>
 <span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a>image <span class="ot">&lt;-</span> <span class="fu">content_image_file</span>(<span class="st">&quot;congressional-assets.png&quot;</span>)</span>
 <span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a>data <span class="ot">&lt;-</span> chat<span class="sc">$</span><span class="fu">chat_structured</span>(image, <span class="at">type =</span> type_assets)</span>
 <span id="cb14-18"><a href="#cb14-18" tabindex="-1"></a>data</span>
-<span id="cb14-19"><a href="#cb14-19" tabindex="-1"></a><span class="co">#&gt;                                 assert_name owner</span></span>
-<span id="cb14-20"><a href="#cb14-20" tabindex="-1"></a><span class="co">#&gt; 1  11 Zinfandel Lane - Home &amp; Vineyard [RP]    JT</span></span>
-<span id="cb14-21"><a href="#cb14-21" tabindex="-1"></a><span class="co">#&gt; 2 25 Point Lobos - Commercial Property [RP]    SP</span></span>
+<span id="cb14-19"><a href="#cb14-19" tabindex="-1"></a><span class="co">#&gt;                            assert_name owner</span></span>
+<span id="cb14-20"><a href="#cb14-20" tabindex="-1"></a><span class="co">#&gt; 1  11 Zinfandel Lane - Home &amp; Vineyard    JT</span></span>
+<span id="cb14-21"><a href="#cb14-21" tabindex="-1"></a><span class="co">#&gt; 2 25 Point Lobos - Commercial Property    SP</span></span>
 <span id="cb14-22"><a href="#cb14-22" tabindex="-1"></a><span class="co">#&gt;                              location asset_value_low asset_value_high</span></span>
 <span id="cb14-23"><a href="#cb14-23" tabindex="-1"></a><span class="co">#&gt; 1             St. Helena/Napa, CA, US         5000001         25000000</span></span>
 <span id="cb14-24"><a href="#cb14-24" tabindex="-1"></a><span class="co">#&gt; 2 San Francisco/San Francisco, CA, US         5000001         25000000</span></span>
@@ -704,7 +710,7 @@ one in the text:</p>
 <span id="cb15-29"><a href="#cb15-29" tabindex="-1"></a><span class="co">#&gt; [1] &quot;&quot;</span></span>
 <span id="cb15-30"><a href="#cb15-30" tabindex="-1"></a><span class="fu">str</span>(data)</span>
 <span id="cb15-31"><a href="#cb15-31" tabindex="-1"></a><span class="co">#&gt; &#39;data.frame&#39;:    2 obs. of  9 variables:</span></span>
-<span id="cb15-32"><a href="#cb15-32" tabindex="-1"></a><span class="co">#&gt;  $ assert_name     : chr  &quot;11 Zinfandel Lane - Home &amp; Vineyard [RP]&quot; &quot;25 Point Lobos - Commercial Property [RP]&quot;</span></span>
+<span id="cb15-32"><a href="#cb15-32" tabindex="-1"></a><span class="co">#&gt;  $ assert_name     : chr  &quot;11 Zinfandel Lane - Home &amp; Vineyard&quot; &quot;25 Point Lobos - Commercial Property&quot;</span></span>
 <span id="cb15-33"><a href="#cb15-33" tabindex="-1"></a><span class="co">#&gt;  $ owner           : chr  &quot;JT&quot; &quot;SP&quot;</span></span>
 <span id="cb15-34"><a href="#cb15-34" tabindex="-1"></a><span class="co">#&gt;  $ location        : chr  &quot;St. Helena/Napa, CA, US&quot; &quot;San Francisco/San Francisco, CA, US&quot;</span></span>
 <span id="cb15-35"><a href="#cb15-35" tabindex="-1"></a><span class="co">#&gt;  $ asset_value_low : int  5000001 5000001</span></span>
@@ -779,21 +785,21 @@ common in the wild.</p>
 <td align="left">OpenAI</td>
 <td align="left">gpt-4.1</td>
 <td align="right">9325</td>
-<td align="right">1702</td>
+<td align="right">1899</td>
 <td align="right">$0.03</td>
 </tr>
 <tr class="even">
 <td align="left">OpenAI</td>
 <td align="left">gpt-4.1-nano</td>
-<td align="right">483</td>
-<td align="right">100</td>
+<td align="right">501</td>
+<td align="right">108</td>
 <td align="right">$0.00</td>
 </tr>
 <tr class="odd">
 <td align="left">Anthropic</td>
-<td align="left">claude-3-7-sonnet</td>
-<td align="right">1268</td>
-<td align="right">1871</td>
+<td align="left">claude-sonnet-4</td>
+<td align="right">1283</td>
+<td align="right">2043</td>
 <td align="right">$0.03</td>
 </tr>
 </tbody>

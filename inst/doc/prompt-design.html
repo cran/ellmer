@@ -422,75 +422,105 @@ our experience it does the best job of generating code.</p>
 <p>When I don’t provide a system prompt, I sometimes get answers in
 different languages or different styles of R code:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_anthropic</span>()</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-3-7-sonnet-latest&quot;.</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-4-20250514&quot;.</span></span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(question)</span></code></pre></div>
-<pre><code>#&gt; # Computing Mean and Median by Age and Sex
+<pre><code>#&gt; Here are several ways to compute the mean and median of variables a through z, 
+#&gt; grouped by age and sex, depending on the tool you&#39;re using:
 #&gt; 
-#&gt; To compute the mean and median of variables a through z grouped by age and sex,
-#&gt; you&#39;ll need to use a statistical software package. Here&#39;s how to do it in 
-#&gt; several common platforms:
+#&gt; ## Python with pandas
 #&gt; 
-#&gt; ## In R
-#&gt; ```r
-#&gt; # Assuming your data is in a dataframe called &#39;df&#39;
-#&gt; library(dplyr)
-#&gt; 
-#&gt; summary_stats &lt;- df %&gt;%
-#&gt;   group_by(age, sex) %&gt;%
-#&gt;   summarize(across(a:z, list(
-#&gt;     mean = ~mean(., na.rm = TRUE),
-#&gt;     median = ~median(., na.rm = TRUE)
-#&gt;   )))
-#&gt; ```
-#&gt; 
-#&gt; ## In Python with pandas
 #&gt; ```python
 #&gt; import pandas as pd
+#&gt; import numpy as np
 #&gt; 
-#&gt; # Assuming your data is in a dataframe called &#39;df&#39;
-#&gt; # For mean
-#&gt; means = df.groupby([&#39;age&#39;, &#39;sex&#39;])[list(&#39;abcdefghijklmnopqrstuvwxyz&#39;)].mean()
+#&gt; # Assuming your data is in a DataFrame called &#39;df&#39;
+#&gt; # Variables a-z plus grouping variables age and sex
 #&gt; 
-#&gt; # For median
-#&gt; medians = df.groupby([&#39;age&#39;, 
-#&gt; &#39;sex&#39;])[list(&#39;abcdefghijklmnopqrstuvwxyz&#39;)].median()
+#&gt; # Method 1: Select variables a-z explicitly
+#&gt; vars_a_to_z = [chr(i) for i in range(ord(&#39;a&#39;), ord(&#39;z&#39;)+1)]
+#&gt; result = df.groupby([&#39;age&#39;, &#39;sex&#39;])[vars_a_to_z].agg([&#39;mean&#39;, &#39;median&#39;])
 #&gt; 
-#&gt; # Or combined
-#&gt; summary = df.groupby([&#39;age&#39;, &#39;sex&#39;]).agg({col: [&#39;mean&#39;, &#39;median&#39;] for col in 
-#&gt; list(&#39;abcdefghijklmnopqrstuvwxyz&#39;)})
+#&gt; # Method 2: If a-z are all your numeric columns (excluding age/sex)
+#&gt; numeric_cols = df.select_dtypes(include=[np.number]).columns.difference([&#39;age&#39;,
+#&gt; &#39;sex&#39;])
+#&gt; result = df.groupby([&#39;age&#39;, &#39;sex&#39;])[numeric_cols].agg([&#39;mean&#39;, &#39;median&#39;])
+#&gt; 
+#&gt; print(result)
 #&gt; ```
 #&gt; 
-#&gt; ## In SPSS
+#&gt; ## R
+#&gt; 
+#&gt; ```r
+#&gt; library(dplyr)
+#&gt; 
+#&gt; # Method 1: Using dplyr with across()
+#&gt; result &lt;- df %&gt;%
+#&gt;   group_by(age, sex) %&gt;%
+#&gt;   summarise(across(a:z, list(mean = mean, median = median), na.rm = TRUE),
+#&gt;             .groups = &#39;drop&#39;)
+#&gt; 
+#&gt; # Method 2: Using aggregate()
+#&gt; vars_to_summarize &lt;- paste0(letters, collapse = &quot;+&quot;)
+#&gt; formula_mean &lt;- as.formula(paste(&quot;cbind(&quot;, vars_to_summarize, &quot;) ~ age + sex&quot;))
+#&gt; 
+#&gt; means &lt;- aggregate(formula_mean, data = df, FUN = mean, na.rm = TRUE)
+#&gt; medians &lt;- aggregate(formula_mean, data = df, FUN = median, na.rm = TRUE)
 #&gt; ```
-#&gt; SORT CASES BY age sex.
+#&gt; 
+#&gt; ## SQL
+#&gt; 
+#&gt; ```sql
+#&gt; SELECT 
+#&gt;     age, 
+#&gt;     sex,
+#&gt;     AVG(a) as mean_a, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY a) as 
+#&gt; median_a,
+#&gt;     AVG(b) as mean_b, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY b) as 
+#&gt; median_b,
+#&gt;     -- ... repeat for all variables c through z
+#&gt;     AVG(z) as mean_z, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY z) as 
+#&gt; median_z
+#&gt; FROM your_table
+#&gt; GROUP BY age, sex
+#&gt; ORDER BY age, sex;
+#&gt; ```
+#&gt; 
+#&gt; ## SAS
+#&gt; 
+#&gt; ```sas
+#&gt; proc means data=your_dataset mean median;
+#&gt;     class age sex;
+#&gt;     var a--z;  /* Variables from a to z */
+#&gt;     output out=summary_stats mean= median= / autoname;
+#&gt; run;
+#&gt; ```
+#&gt; 
+#&gt; ## SPSS Syntax
+#&gt; 
+#&gt; ```spss
 #&gt; AGGREGATE
 #&gt;   /OUTFILE=* MODE=ADDVARIABLES
 #&gt;   /BREAK=age sex
-#&gt;   /a_mean=MEAN(a) /a_median=MEDIAN(a)
-#&gt;   /b_mean=MEAN(b) /b_median=MEDIAN(b)
+#&gt;   /a_mean=MEAN(a)
+#&gt;   /a_median=MEDIAN(a)
+#&gt;   /b_mean=MEAN(b)
+#&gt;   /b_median=MEDIAN(b)
 #&gt;   /* Continue for all variables through z */
-#&gt;   /z_mean=MEAN(z) /z_median=MEDIAN(z).
+#&gt;   /z_mean=MEAN(z)
+#&gt;   /z_median=MEDIAN(z).
 #&gt; ```
 #&gt; 
-#&gt; ## In Stata
-#&gt; ```stata
-#&gt; collapse (mean) a_mean=a b_mean=b ... z_mean=z ///
-#&gt;          (median) a_median=a b_median=b ... z_median=z, ///
-#&gt;          by(age sex)
-#&gt; ```
+#&gt; The **pandas solution** is probably the most flexible and commonly used. The 
+#&gt; key points are:
 #&gt; 
-#&gt; ## In SAS
-#&gt; ```sas
-#&gt; PROC MEANS DATA=mydata MEAN MEDIAN;
-#&gt;   CLASS age sex;
-#&gt;   VAR a b c d e f g h i j k l m n o p q r s t u v w x y z;
-#&gt;   OUTPUT OUT=summary_stats MEAN= MEDIAN= / AUTONAME;
-#&gt; RUN;
-#&gt; ```
+#&gt; 1. **Group by** your categorical variables (age, sex)
+#&gt; 2. **Select** the variables you want to summarize (a through z)
+#&gt; 3. **Apply** the aggregation functions (mean, median)
+#&gt; 4. Handle **missing values** appropriately (most functions have options for 
+#&gt; this)
 #&gt; 
-#&gt; Choose the approach that matches your preferred software. These methods handle 
-#&gt; missing values appropriately and provide both statistics grouped by the age and
-#&gt; sex variables.</code></pre>
+#&gt; Which tool are you planning to use? I can provide more specific guidance based 
+#&gt; on your preferred software.</code></pre>
 <p>I can ensure that I always get R code in a specific style by
 providing a system prompt:</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_anthropic</span>(</span>
@@ -498,60 +528,74 @@ providing a system prompt:</p>
 <span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="st">  You are an expert R programmer who prefers the tidyverse.</span></span>
 <span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="st">&quot;</span></span>
 <span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>)</span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-3-7-sonnet-latest&quot;.</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-4-20250514&quot;.</span></span>
 <span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(question)</span></code></pre></div>
-<pre><code>#&gt; # Computing Mean and Median by Group in R
+<pre><code>#&gt; Here are a few efficient ways to compute the mean and median of variables a 
+#&gt; through z, grouped by age and sex using tidyverse:
 #&gt; 
-#&gt; To compute the mean and median of variables a through z, grouped by age and 
-#&gt; sex, I&#39;ll use the tidyverse approach. Here&#39;s how to do it:
-#&gt; 
-#&gt; ```r
-#&gt; library(tidyverse)
-#&gt; 
-#&gt; # Assuming your data is in a data frame called &#39;df&#39;
-#&gt; result &lt;- df %&gt;%
-#&gt;   # Group by age and sex
-#&gt;   group_by(age, sex) %&gt;%
-#&gt;   
-#&gt;   # Calculate mean and median for variables a through z
-#&gt;   summarize(across(
-#&gt;     .cols = a:z,
-#&gt;     .fns = list(mean = mean, median = median),
-#&gt;     .names = &quot;{.col}_{.fn}&quot;,
-#&gt;     na.rm = TRUE
-#&gt;   )) %&gt;%
-#&gt;   
-#&gt;   # Optional: Convert back to regular data frame
-#&gt;   ungroup()
-#&gt; ```
-#&gt; 
-#&gt; This code:
-#&gt; 1. Groups your data by age and sex
-#&gt; 2. Uses `across()` to apply both mean and median functions to all variables 
-#&gt; from a to z
-#&gt; 3. Names the resulting columns as &quot;variable_function&quot; (e.g., &quot;a_mean&quot;, 
-#&gt; &quot;a_median&quot;)
-#&gt; 4. Handles missing values with `na.rm = TRUE`
-#&gt; 
-#&gt; If your variables aren&#39;t conveniently named a through z in sequence, you can 
-#&gt; use a character vector instead:
+#&gt; ## Method 1: Using `across()` with `summarise()` (Recommended)
 #&gt; 
 #&gt; ```r
-#&gt; variables &lt;- letters[1:26]  # Creates c(&quot;a&quot;, &quot;b&quot;, ..., &quot;z&quot;)
+#&gt; library(dplyr)
 #&gt; 
 #&gt; result &lt;- df %&gt;%
 #&gt;   group_by(age, sex) %&gt;%
-#&gt;   summarize(across(
-#&gt;     .cols = all_of(variables),
-#&gt;     .fns = list(mean = mean, median = median),
-#&gt;     .names = &quot;{.col}_{.fn}&quot;,
-#&gt;     na.rm = TRUE
-#&gt;   )) %&gt;%
-#&gt;   ungroup()
+#&gt;   summarise(
+#&gt;     across(a:z, list(mean = mean, median = median), .names = &quot;{.col}_{.fn}&quot;),
+#&gt;     .groups = &quot;drop&quot;
+#&gt;   )
 #&gt; ```
 #&gt; 
-#&gt; The result will be a data frame with age and sex columns, followed by mean and 
-#&gt; median columns for each variable.</code></pre>
+#&gt; ## Method 2: If you want separate mean and median tables
+#&gt; 
+#&gt; ```r
+#&gt; # For means
+#&gt; means &lt;- df %&gt;%
+#&gt;   group_by(age, sex) %&gt;%
+#&gt;   summarise(across(a:z, mean), .groups = &quot;drop&quot;)
+#&gt; 
+#&gt; # For medians  
+#&gt; medians &lt;- df %&gt;%
+#&gt;   group_by(age, sex) %&gt;%
+#&gt;   summarise(across(a:z, median), .groups = &quot;drop&quot;)
+#&gt; ```
+#&gt; 
+#&gt; ## Method 3: Using `pivot_longer()` for a tidy format
+#&gt; 
+#&gt; ```r
+#&gt; library(dplyr)
+#&gt; library(tidyr)
+#&gt; 
+#&gt; result_tidy &lt;- df %&gt;%
+#&gt;   group_by(age, sex) %&gt;%
+#&gt;   summarise(across(a:z, list(mean = mean, median = median)), .groups = &quot;drop&quot;) 
+#&gt; %&gt;%
+#&gt;   pivot_longer(
+#&gt;     cols = -c(age, sex),
+#&gt;     names_to = c(&quot;variable&quot;, &quot;statistic&quot;),
+#&gt;     names_sep = &quot;_&quot;,
+#&gt;     values_to = &quot;value&quot;
+#&gt;   )
+#&gt; ```
+#&gt; 
+#&gt; ## Method 4: Handling missing values
+#&gt; 
+#&gt; If your data might contain `NA` values:
+#&gt; 
+#&gt; ```r
+#&gt; result &lt;- df %&gt;%
+#&gt;   group_by(age, sex) %&gt;%
+#&gt;   summarise(
+#&gt;     across(a:z, list(mean = ~mean(.x, na.rm = TRUE), 
+#&gt;                      median = ~median(.x, na.rm = TRUE)), 
+#&gt;            .names = &quot;{.col}_{.fn}&quot;),
+#&gt;     .groups = &quot;drop&quot;
+#&gt;   )
+#&gt; ```
+#&gt; 
+#&gt; The first method is usually the most practical as it gives you all statistics 
+#&gt; in one wide table with clear column names like `a_mean`, `a_median`, `b_mean`, 
+#&gt; `b_median`, etc.</code></pre>
 <p>Note that I’m using both a system prompt (which defines the general
 behaviour) and a user prompt (which asks the specific question). You
 could put all this content in the user prompt and get similar results,
@@ -565,14 +609,14 @@ explanation and sample data:</p>
 <span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="st">  Just give me the code. I don&#39;t want any explanation or sample data.</span></span>
 <span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="st">&quot;</span></span>
 <span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>)</span>
-<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-3-7-sonnet-latest&quot;.</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-4-20250514&quot;.</span></span>
 <span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(question)</span></code></pre></div>
 <pre><code>#&gt; ```r
-#&gt; library(tidyverse)
+#&gt; library(dplyr)
 #&gt; 
-#&gt; data %&gt;%
+#&gt; df %&gt;%
 #&gt;   group_by(age, sex) %&gt;%
-#&gt;   summarize(across(a:z, list(mean = mean, median = median), na.rm = TRUE),
+#&gt;   summarise(across(a:z, list(mean = mean, median = median), na.rm = TRUE),
 #&gt;             .groups = &quot;drop&quot;)
 #&gt; ```</code></pre>
 <p>And of course, if you want a different style of R code, just ask for
@@ -583,15 +627,15 @@ it:</p>
 <span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="st">  Just give me the code. I don&#39;t want any explanation or sample data.</span></span>
 <span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="st">&quot;</span></span>
 <span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>)</span>
-<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-3-7-sonnet-latest&quot;.</span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-4-20250514&quot;.</span></span>
 <span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(question)</span></code></pre></div>
 <pre><code>#&gt; ```r
 #&gt; library(data.table)
 #&gt; 
 #&gt; dt[, lapply(.SD, function(x) list(mean = mean(x, na.rm = TRUE), 
 #&gt;                                   median = median(x, na.rm = TRUE))), 
-#&gt;     by = .(age, sex), 
-#&gt;     .SDcols = letters]
+#&gt;    by = .(age, sex), 
+#&gt;    .SDcols = letters]
 #&gt; ```</code></pre>
 <div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a></span>
 <span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_anthropic</span>(</span>
@@ -600,37 +644,11 @@ it:</p>
 <span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="st">  Just give me the code. I don&#39;t want any explanation or sample data.</span></span>
 <span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="st">&quot;</span></span>
 <span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>)</span>
-<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-3-7-sonnet-latest&quot;.</span></span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-4-20250514&quot;.</span></span>
 <span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(question)</span></code></pre></div>
 <pre><code>#&gt; ```r
-#&gt; # Assuming data frame &#39;df&#39; with variables a through z, age, and sex
-#&gt; vars &lt;- letters
-#&gt; result &lt;- lapply(vars, function(var) {
-#&gt;   formula &lt;- as.formula(paste0(var, &quot; ~ age + sex&quot;))
-#&gt;   means &lt;- aggregate(formula, data = df, FUN = mean, na.rm = TRUE)
-#&gt;   medians &lt;- aggregate(formula, data = df, FUN = median, na.rm = TRUE)
-#&gt;   
-#&gt;   means_df &lt;- data.frame(
-#&gt;     variable = var,
-#&gt;     age = means$age,
-#&gt;     sex = means$sex,
-#&gt;     mean = means[[var]],
-#&gt;     stringsAsFactors = FALSE
-#&gt;   )
-#&gt;   
-#&gt;   medians_df &lt;- data.frame(
-#&gt;     variable = var,
-#&gt;     age = medians$age,
-#&gt;     sex = medians$sex,
-#&gt;     median = medians[[var]],
-#&gt;     stringsAsFactors = FALSE
-#&gt;   )
-#&gt;   
-#&gt;   merge(means_df, medians_df, by = c(&quot;variable&quot;, &quot;age&quot;, &quot;sex&quot;))
-#&gt; })
-#&gt; 
-#&gt; final_result &lt;- do.call(rbind, result)
-#&gt; rownames(final_result) &lt;- NULL
+#&gt; aggregate(. ~ age + sex, data = df, FUN = function(x) c(mean = mean(x, na.rm = 
+#&gt; TRUE), median = median(x, na.rm = TRUE)))
 #&gt; ```</code></pre>
 </div>
 <div id="be-explicit" class="section level3">
@@ -651,20 +669,18 @@ so I provide more details about what I do want:</p>
 <span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a><span class="st">  * Use the base pipe, `|&gt;`, not the magrittr pipe `%&gt;%`.</span></span>
 <span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a><span class="st">&quot;</span></span>
 <span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a>)</span>
-<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-3-7-sonnet-latest&quot;.</span></span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-4-20250514&quot;.</span></span>
 <span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(question)</span></code></pre></div>
 <pre><code>#&gt; ```r
-#&gt; library(tidyverse)
+#&gt; library(dplyr)
 #&gt; 
-#&gt; data |&gt;
+#&gt; df |&gt;
 #&gt;   group_by(age, sex) |&gt;
-#&gt;   summarize(
+#&gt;   summarise(
 #&gt;     across(
 #&gt;       a:z,
-#&gt;       list(
-#&gt;         mean = ~ mean(.x, na.rm = TRUE),
-#&gt;         median = ~ median(.x, na.rm = TRUE)
-#&gt;       )
+#&gt;       list(mean = mean, median = median),
+#&gt;       na.rm = TRUE
 #&gt;     ),
 #&gt;     .groups = &quot;drop&quot;
 #&gt;   )
@@ -682,25 +698,30 @@ explanation of the code:</p>
 <span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a><span class="st">  argument. Just give me the code. I don&#39;t want any explanation or sample data.</span></span>
 <span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a><span class="st">&quot;</span></span>
 <span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a>)</span>
-<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-3-7-sonnet-latest&quot;.</span></span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-4-20250514&quot;.</span></span>
 <span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(question)</span></code></pre></div>
 <pre><code>#&gt; ```r
-#&gt; # Load dplyr for data manipulation
+#&gt; # Load required library for data manipulation
 #&gt; library(dplyr)
 #&gt; 
-#&gt; # Create a vector of variable names from a to z
-#&gt; vars &lt;- letters
-#&gt; 
-#&gt; # Compute mean and median for each variable, grouped by age and sex
+#&gt; # Group data by age and sex, then calculate mean and median for variables a 
+#&gt; through z
 #&gt; result &lt;- data %&gt;%
-#&gt;   group_by(age, sex) %&gt;%
-#&gt;   summarise(across(
-#&gt;     .cols = all_of(vars),  # Select all variables from a to z
-#&gt;     .fns = list(
-#&gt;       mean = ~mean(., na.rm = TRUE),  # Calculate mean, removing NA values
-#&gt;       median = ~median(., na.rm = TRUE)  # Calculate median, removing NA values
-#&gt;     )
-#&gt;   ))
+#&gt;   group_by(age, sex) %&gt;%  # Create groups based on age and sex combinations
+#&gt;   summarise(
+#&gt;     across(
+#&gt;       .cols = a:z,  # Select all columns from &#39;a&#39; to &#39;z&#39;
+#&gt;       .fns = list(
+#&gt;         mean = ~ mean(.x, na.rm = TRUE),    # Calculate mean, removing NA 
+#&gt; values
+#&gt;         median = ~ median(.x, na.rm = TRUE) # Calculate median, removing NA 
+#&gt; values
+#&gt;       ),
+#&gt;       .names = &quot;{.col}_{.fn}&quot;  # Name format: variable_function (e.g., a_mean, 
+#&gt; a_median)
+#&gt;     ),
+#&gt;     .groups = &quot;drop&quot;  # Remove grouping structure from result
+#&gt;   )
 #&gt; ```</code></pre>
 </div>
 <div id="teach-it-about-new-features" class="section level3">
@@ -731,12 +752,12 @@ features, you might need to provide the examples yourself:</p>
 <span id="cb17-18"><a href="#cb17-18" tabindex="-1"></a><span class="st">    )</span></span>
 <span id="cb17-19"><a href="#cb17-19" tabindex="-1"></a><span class="st">&quot;</span></span>
 <span id="cb17-20"><a href="#cb17-20" tabindex="-1"></a>)</span>
-<span id="cb17-21"><a href="#cb17-21" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-3-7-sonnet-latest&quot;.</span></span>
+<span id="cb17-21"><a href="#cb17-21" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-4-20250514&quot;.</span></span>
 <span id="cb17-22"><a href="#cb17-22" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(question)</span></code></pre></div>
 <pre><code>#&gt; ```r
 #&gt; data |&gt;
-#&gt;   summarize(
-#&gt;     across(a:z, list(mean = mean, median = median), na.rm = TRUE),
+#&gt;   summarise(
+#&gt;     across(a:z, list(mean = mean, median = median), .names = &quot;{.col}_{.fn}&quot;),
 #&gt;     .by = c(age, sex)
 #&gt;   )
 #&gt; ```</code></pre>
@@ -787,49 +808,66 @@ page.</p>
 <span id="cb20-10"><a href="#cb20-10" tabindex="-1"></a><span class="co">#&gt; [</span></span>
 <span id="cb20-11"><a href="#cb20-11" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
 <span id="cb20-12"><a href="#cb20-12" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;dark brown sugar&quot;,</span></span>
-<span id="cb20-13"><a href="#cb20-13" tabindex="-1"></a><span class="co">#&gt;     &quot;amount&quot;: &quot;3/4 cup&quot;,</span></span>
-<span id="cb20-14"><a href="#cb20-14" tabindex="-1"></a><span class="co">#&gt;     &quot;weight&quot;: &quot;150g&quot;</span></span>
-<span id="cb20-15"><a href="#cb20-15" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb20-16"><a href="#cb20-16" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb20-17"><a href="#cb20-17" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;eggs&quot;,</span></span>
-<span id="cb20-18"><a href="#cb20-18" tabindex="-1"></a><span class="co">#&gt;     &quot;amount&quot;: &quot;2&quot;,</span></span>
-<span id="cb20-19"><a href="#cb20-19" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;large&quot;</span></span>
-<span id="cb20-20"><a href="#cb20-20" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb20-21"><a href="#cb20-21" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb20-22"><a href="#cb20-22" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;sour cream&quot;,</span></span>
-<span id="cb20-23"><a href="#cb20-23" tabindex="-1"></a><span class="co">#&gt;     &quot;amount&quot;: &quot;3/4 cup&quot;,</span></span>
-<span id="cb20-24"><a href="#cb20-24" tabindex="-1"></a><span class="co">#&gt;     &quot;weight&quot;: &quot;165g&quot;</span></span>
-<span id="cb20-25"><a href="#cb20-25" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb20-26"><a href="#cb20-26" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb20-27"><a href="#cb20-27" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;unsalted butter&quot;,</span></span>
-<span id="cb20-28"><a href="#cb20-28" tabindex="-1"></a><span class="co">#&gt;     &quot;amount&quot;: &quot;1/2 cup&quot;,</span></span>
-<span id="cb20-29"><a href="#cb20-29" tabindex="-1"></a><span class="co">#&gt;     &quot;weight&quot;: &quot;113g&quot;,</span></span>
-<span id="cb20-30"><a href="#cb20-30" tabindex="-1"></a><span class="co">#&gt;     &quot;note&quot;: &quot;melted&quot;</span></span>
-<span id="cb20-31"><a href="#cb20-31" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb20-32"><a href="#cb20-32" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb20-33"><a href="#cb20-33" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;vanilla extract&quot;,</span></span>
-<span id="cb20-34"><a href="#cb20-34" tabindex="-1"></a><span class="co">#&gt;     &quot;amount&quot;: &quot;1 teaspoon&quot;</span></span>
-<span id="cb20-35"><a href="#cb20-35" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb20-36"><a href="#cb20-36" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb20-37"><a href="#cb20-37" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;kosher salt&quot;,</span></span>
-<span id="cb20-38"><a href="#cb20-38" tabindex="-1"></a><span class="co">#&gt;     &quot;amount&quot;: &quot;3/4 teaspoon&quot;</span></span>
-<span id="cb20-39"><a href="#cb20-39" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb20-40"><a href="#cb20-40" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb20-41"><a href="#cb20-41" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;neutral oil&quot;,</span></span>
-<span id="cb20-42"><a href="#cb20-42" tabindex="-1"></a><span class="co">#&gt;     &quot;amount&quot;: &quot;1/3 cup&quot;,</span></span>
-<span id="cb20-43"><a href="#cb20-43" tabindex="-1"></a><span class="co">#&gt;     &quot;volume&quot;: &quot;80ml&quot;</span></span>
-<span id="cb20-44"><a href="#cb20-44" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb20-45"><a href="#cb20-45" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb20-46"><a href="#cb20-46" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;all-purpose flour&quot;,</span></span>
-<span id="cb20-47"><a href="#cb20-47" tabindex="-1"></a><span class="co">#&gt;     &quot;amount&quot;: &quot;1 1/2 cups&quot;,</span></span>
-<span id="cb20-48"><a href="#cb20-48" tabindex="-1"></a><span class="co">#&gt;     &quot;weight&quot;: &quot;190g&quot;</span></span>
-<span id="cb20-49"><a href="#cb20-49" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb20-50"><a href="#cb20-50" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb20-51"><a href="#cb20-51" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;sugar&quot;,</span></span>
-<span id="cb20-52"><a href="#cb20-52" tabindex="-1"></a><span class="co">#&gt;     &quot;amount_1&quot;: &quot;150g&quot;,</span></span>
-<span id="cb20-53"><a href="#cb20-53" tabindex="-1"></a><span class="co">#&gt;     &quot;amount_2&quot;: &quot;1 1/2 teaspoons&quot;</span></span>
-<span id="cb20-54"><a href="#cb20-54" tabindex="-1"></a><span class="co">#&gt;   }</span></span>
-<span id="cb20-55"><a href="#cb20-55" tabindex="-1"></a><span class="co">#&gt; ]</span></span></code></pre></div>
+<span id="cb20-13"><a href="#cb20-13" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 0.75,</span></span>
+<span id="cb20-14"><a href="#cb20-14" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;cup&quot;,</span></span>
+<span id="cb20-15"><a href="#cb20-15" tabindex="-1"></a><span class="co">#&gt;     &quot;metric_quantity&quot;: 150,</span></span>
+<span id="cb20-16"><a href="#cb20-16" tabindex="-1"></a><span class="co">#&gt;     &quot;metric_unit&quot;: &quot;g&quot;</span></span>
+<span id="cb20-17"><a href="#cb20-17" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
+<span id="cb20-18"><a href="#cb20-18" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
+<span id="cb20-19"><a href="#cb20-19" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;large eggs&quot;,</span></span>
+<span id="cb20-20"><a href="#cb20-20" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 2,</span></span>
+<span id="cb20-21"><a href="#cb20-21" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;pieces&quot;</span></span>
+<span id="cb20-22"><a href="#cb20-22" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
+<span id="cb20-23"><a href="#cb20-23" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
+<span id="cb20-24"><a href="#cb20-24" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;sour cream&quot;,</span></span>
+<span id="cb20-25"><a href="#cb20-25" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 0.75,</span></span>
+<span id="cb20-26"><a href="#cb20-26" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;cup&quot;,</span></span>
+<span id="cb20-27"><a href="#cb20-27" tabindex="-1"></a><span class="co">#&gt;     &quot;metric_quantity&quot;: 165,</span></span>
+<span id="cb20-28"><a href="#cb20-28" tabindex="-1"></a><span class="co">#&gt;     &quot;metric_unit&quot;: &quot;g&quot;</span></span>
+<span id="cb20-29"><a href="#cb20-29" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
+<span id="cb20-30"><a href="#cb20-30" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
+<span id="cb20-31"><a href="#cb20-31" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;unsalted butter&quot;,</span></span>
+<span id="cb20-32"><a href="#cb20-32" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 0.5,</span></span>
+<span id="cb20-33"><a href="#cb20-33" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;cup&quot;,</span></span>
+<span id="cb20-34"><a href="#cb20-34" tabindex="-1"></a><span class="co">#&gt;     &quot;metric_quantity&quot;: 113,</span></span>
+<span id="cb20-35"><a href="#cb20-35" tabindex="-1"></a><span class="co">#&gt;     &quot;metric_unit&quot;: &quot;g&quot;,</span></span>
+<span id="cb20-36"><a href="#cb20-36" tabindex="-1"></a><span class="co">#&gt;     &quot;note&quot;: &quot;melted&quot;</span></span>
+<span id="cb20-37"><a href="#cb20-37" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
+<span id="cb20-38"><a href="#cb20-38" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
+<span id="cb20-39"><a href="#cb20-39" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;vanilla extract&quot;,</span></span>
+<span id="cb20-40"><a href="#cb20-40" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 1,</span></span>
+<span id="cb20-41"><a href="#cb20-41" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;teaspoon&quot;</span></span>
+<span id="cb20-42"><a href="#cb20-42" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
+<span id="cb20-43"><a href="#cb20-43" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
+<span id="cb20-44"><a href="#cb20-44" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;kosher salt&quot;,</span></span>
+<span id="cb20-45"><a href="#cb20-45" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 0.75,</span></span>
+<span id="cb20-46"><a href="#cb20-46" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;teaspoon&quot;</span></span>
+<span id="cb20-47"><a href="#cb20-47" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
+<span id="cb20-48"><a href="#cb20-48" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
+<span id="cb20-49"><a href="#cb20-49" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;neutral oil&quot;,</span></span>
+<span id="cb20-50"><a href="#cb20-50" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 0.33,</span></span>
+<span id="cb20-51"><a href="#cb20-51" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;cup&quot;,</span></span>
+<span id="cb20-52"><a href="#cb20-52" tabindex="-1"></a><span class="co">#&gt;     &quot;metric_quantity&quot;: 80,</span></span>
+<span id="cb20-53"><a href="#cb20-53" tabindex="-1"></a><span class="co">#&gt;     &quot;metric_unit&quot;: &quot;ml&quot;</span></span>
+<span id="cb20-54"><a href="#cb20-54" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
+<span id="cb20-55"><a href="#cb20-55" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
+<span id="cb20-56"><a href="#cb20-56" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;all-purpose flour&quot;,</span></span>
+<span id="cb20-57"><a href="#cb20-57" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 1.5,</span></span>
+<span id="cb20-58"><a href="#cb20-58" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;cups&quot;,</span></span>
+<span id="cb20-59"><a href="#cb20-59" tabindex="-1"></a><span class="co">#&gt;     &quot;metric_quantity&quot;: 190,</span></span>
+<span id="cb20-60"><a href="#cb20-60" tabindex="-1"></a><span class="co">#&gt;     &quot;metric_unit&quot;: &quot;g&quot;</span></span>
+<span id="cb20-61"><a href="#cb20-61" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
+<span id="cb20-62"><a href="#cb20-62" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
+<span id="cb20-63"><a href="#cb20-63" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;sugar&quot;,</span></span>
+<span id="cb20-64"><a href="#cb20-64" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 150,</span></span>
+<span id="cb20-65"><a href="#cb20-65" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;g&quot;</span></span>
+<span id="cb20-66"><a href="#cb20-66" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
+<span id="cb20-67"><a href="#cb20-67" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
+<span id="cb20-68"><a href="#cb20-68" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;sugar&quot;,</span></span>
+<span id="cb20-69"><a href="#cb20-69" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 1.5,</span></span>
+<span id="cb20-70"><a href="#cb20-70" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;teaspoons&quot;</span></span>
+<span id="cb20-71"><a href="#cb20-71" tabindex="-1"></a><span class="co">#&gt;   }</span></span>
+<span id="cb20-72"><a href="#cb20-72" tabindex="-1"></a><span class="co">#&gt; ]</span></span></code></pre></div>
 <p>(I don’t know if the additional colour, “You’re an expert baker who
 also loves JSON”, does anything, but I like to think this helps the LLM
 get into the right mindset of a very nerdy baker.)</p>
@@ -860,7 +898,7 @@ provide the input and output examples in such a loose format.</p>
 <span id="cb21-18"><a href="#cb21-18" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;dark brown sugar&quot;, &quot;quantity&quot;: 150, &quot;unit&quot;: &quot;g&quot;},</span></span>
 <span id="cb21-19"><a href="#cb21-19" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;large eggs&quot;, &quot;quantity&quot;: 2, &quot;unit&quot;: &quot;count&quot;},</span></span>
 <span id="cb21-20"><a href="#cb21-20" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;sour cream&quot;, &quot;quantity&quot;: 165, &quot;unit&quot;: &quot;g&quot;},</span></span>
-<span id="cb21-21"><a href="#cb21-21" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;unsalted butter&quot;, &quot;quantity&quot;: 113, &quot;unit&quot;: &quot;g&quot;, &quot;note&quot;: &quot;melted&quot;},</span></span>
+<span id="cb21-21"><a href="#cb21-21" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;unsalted butter, melted&quot;, &quot;quantity&quot;: 113, &quot;unit&quot;: &quot;g&quot;},</span></span>
 <span id="cb21-22"><a href="#cb21-22" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;vanilla extract&quot;, &quot;quantity&quot;: 1, &quot;unit&quot;: &quot;teaspoon&quot;},</span></span>
 <span id="cb21-23"><a href="#cb21-23" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;kosher salt&quot;, &quot;quantity&quot;: 0.75, &quot;unit&quot;: &quot;teaspoon&quot;},</span></span>
 <span id="cb21-24"><a href="#cb21-24" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;neutral oil&quot;, &quot;quantity&quot;: 80, &quot;unit&quot;: &quot;ml&quot;},</span></span>
@@ -1008,7 +1046,7 @@ doing a good job:</p>
 <span id="cb27-6"><a href="#cb27-6" tabindex="-1"></a><span class="co">#&gt; of softened unsalted butter&quot;},</span></span>
 <span id="cb27-7"><a href="#cb27-7" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;white sugar&quot;, &quot;quantity&quot;: 0.25, &quot;unit&quot;: &quot;cup&quot;, &quot;input&quot;: &quot;a quarter </span></span>
 <span id="cb27-8"><a href="#cb27-8" tabindex="-1"></a><span class="co">#&gt; cup of white sugar&quot;},</span></span>
-<span id="cb27-9"><a href="#cb27-9" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;egg&quot;, &quot;quantity&quot;: 1, &quot;unit&quot;: &quot;large&quot;, &quot;input&quot;: &quot;an egg&quot;},</span></span>
+<span id="cb27-9"><a href="#cb27-9" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;egg&quot;, &quot;quantity&quot;: 1, &quot;unit&quot;: &quot;item&quot;, &quot;input&quot;: &quot;an egg&quot;},</span></span>
 <span id="cb27-10"><a href="#cb27-10" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;vanilla extract&quot;, &quot;quantity&quot;: 1, &quot;unit&quot;: &quot;teaspoon&quot;, &quot;input&quot;: &quot;1 </span></span>
 <span id="cb27-11"><a href="#cb27-11" tabindex="-1"></a><span class="co">#&gt; teaspoon of vanilla extract&quot;},</span></span>
 <span id="cb27-12"><a href="#cb27-12" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;all-purpose flour&quot;, &quot;quantity&quot;: 2, &quot;unit&quot;: &quot;cup&quot;, &quot;input&quot;: &quot;2 cups </span></span>
@@ -1039,21 +1077,21 @@ my examples.</p>
 <td align="left">OpenAI</td>
 <td align="left">gpt-4.1</td>
 <td align="right">1139</td>
-<td align="right">917</td>
+<td align="right">1035</td>
 <td align="right">$0.01</td>
 </tr>
 <tr class="even">
 <td align="left">OpenAI</td>
 <td align="left">gpt-4.1-nano</td>
-<td align="right">483</td>
-<td align="right">100</td>
+<td align="right">501</td>
+<td align="right">108</td>
 <td align="right">$0.00</td>
 </tr>
 <tr class="odd">
 <td align="left">Anthropic</td>
-<td align="left">claude-3-7-sonnet</td>
-<td align="right">788</td>
-<td align="right">1774</td>
+<td align="left">claude-sonnet-4</td>
+<td align="right">802</td>
+<td align="right">1948</td>
 <td align="right">$0.03</td>
 </tr>
 </tbody>
