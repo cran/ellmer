@@ -1,9 +1,10 @@
-## ----include = FALSE----------------------------------------------------------
+## -----------------------------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = ellmer:::openai_key_exists()
+  eval = ellmer:::eval_vignette()
 )
+vcr::setup_knitr()
 
 ## ----setup--------------------------------------------------------------------
 library(ellmer)
@@ -76,6 +77,8 @@ capital <- function(chat, country) {
 capital(chat, "France")
 
 ## -----------------------------------------------------------------------------
+set.seed(1014) # make it reproducible
+
 chat <- chat_openai("Be terse", model = "gpt-4.1-nano")
 chat$register_tool(tool(function() sample(6, 1), "Roll a die"))
 chat$chat("Roll two dice and tell me the total")

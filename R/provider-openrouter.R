@@ -26,14 +26,11 @@ chat_openrouter <- function(
   model = NULL,
   seed = NULL,
   api_args = list(),
-  echo = c("none", "output", "all")
+  echo = c("none", "output", "all"),
+  api_headers = character()
 ) {
   model <- set_default(model, "gpt-4o")
   echo <- check_echo(echo)
-
-  if (is_testing() && is.null(seed)) {
-    seed <- seed %||% 1014
-  }
 
   provider <- ProviderOpenRouter(
     name = "OpenRouter",
@@ -41,13 +38,14 @@ chat_openrouter <- function(
     model = model,
     seed = seed,
     extra_args = api_args,
-    api_key = api_key
+    api_key = api_key,
+    extra_headers = api_headers
   )
   Chat$new(provider = provider, system_prompt = system_prompt, echo = echo)
 }
 
-chat_openrouter_test <- function(...) {
-  chat_openrouter(..., model = "openai/gpt-4o-mini-2024-07-18")
+chat_openrouter_test <- function(..., echo = "none") {
+  chat_openrouter(..., model = "openai/gpt-4o-mini-2024-07-18", echo = echo)
 }
 
 ProviderOpenRouter <- new_class(

@@ -53,7 +53,8 @@ chat_databricks <- function(
   model = NULL,
   token = NULL,
   api_args = list(),
-  echo = c("none", "output", "all")
+  echo = c("none", "output", "all"),
+  api_headers = character()
 ) {
   check_string(workspace, allow_empty = FALSE)
   check_string(token, allow_empty = FALSE, allow_null = TRUE)
@@ -72,7 +73,8 @@ chat_databricks <- function(
     credentials = credentials,
     # Databricks APIs use bearer tokens, not API keys, but we need to pass an
     # empty string here anyway to make S7::validate() happy.
-    api_key = ""
+    api_key = "",
+    extra_headers = api_headers
   )
   Chat$new(provider = provider, system_prompt = system_prompt, echo = echo)
 }
@@ -86,8 +88,7 @@ ProviderDatabricks <- new_class(
 method(base_request, ProviderDatabricks) <- function(provider) {
   req <- request(provider@base_url)
   req <- ellmer_req_credentials(req, provider@credentials)
-  req <- req_retry(req, max_tries = 2)
-  req <- ellmer_req_timeout(req, stream)
+  req <- ellmer_req_robustify(req)
   req <- ellmer_req_user_agent(req, databricks_user_agent())
   req <- base_request_error(provider, req)
   req
@@ -188,8 +189,9 @@ method(as_json, list(ProviderDatabricks, ToolDef)) <- function(provider, x) {
       description = x@description,
       # Use the same parameter encoding as the OpenAI provider, but only if
       # there actually are parameters.
-      parameters = if (length(x@arguments@properties) != 0)
+      parameters = if (length(x@arguments@properties) != 0) {
         as_json(provider, x@arguments)
+      }
     ))
   ))
 }

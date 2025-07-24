@@ -1,9 +1,10 @@
-## ----include = FALSE----------------------------------------------------------
+## -----------------------------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
-  eval = ellmer:::openai_key_exists(),
-  comment = "#>"
+  comment = "#>",
+  eval = ellmer:::eval_vignette()
 )
+vcr::setup_knitr()
 
 ## ----setup--------------------------------------------------------------------
 library(ellmer)

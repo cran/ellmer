@@ -43,7 +43,8 @@ chat_ollama <- function(
   seed = NULL,
   api_args = list(),
   echo = NULL,
-  api_key = NULL
+  api_key = NULL,
+  api_headers = character()
 ) {
   if (!has_ollama(base_url)) {
     cli::cli_abort("Can't find locally running ollama.")
@@ -76,7 +77,8 @@ chat_ollama <- function(
     extra_args = api_args,
     # ollama doesn't require an API key for local usage, but one might be needed
     # if ollama is served behind a proxy (see #501)
-    api_key = api_key %||% Sys.getenv("OLLAMA_API_KEY", "ollama")
+    api_key = api_key %||% Sys.getenv("OLLAMA_API_KEY", "ollama"),
+    extra_headers = api_headers
   )
 
   Chat$new(provider = provider, system_prompt = system_prompt, echo = echo)
@@ -92,7 +94,7 @@ ProviderOllama <- new_class(
   )
 )
 
-chat_ollama_test <- function(..., model = "llama3.2:1b") {
+chat_ollama_test <- function(..., model = "qwen3:4b", echo = "none") {
   # model: Note that tests require a model with tool capabilities
 
   skip_if_no_ollama()
@@ -101,7 +103,7 @@ chat_ollama_test <- function(..., model = "llama3.2:1b") {
     sprintf("Ollama: model '%s' is not installed", model)
   )
 
-  chat_ollama(..., model = model)
+  chat_ollama(..., model = model, echo = echo)
 }
 
 skip_if_no_ollama <- function() {
@@ -114,7 +116,7 @@ skip_if_no_ollama <- function() {
 #' @rdname chat_ollama
 models_ollama <- function(base_url = "http://localhost:11434") {
   req <- request(base_url)
-  req <- req_url_path(req, "api/tags")
+  req <- req_url_path_append(req, "api/tags")
   resp <- req_perform(req)
   json <- resp_body_json(resp)
 
@@ -127,16 +129,47 @@ models_ollama <- function(base_url = "http://localhost:11434") {
   df <- data.frame(
     id = names,
     created_at = modified_at,
-    size = size
+    size = size,
+    capabilities = ollama_model_capabilities(names)
   )
   df[order(-xtfrm(df$created_at)), ]
 }
+
+the$ollama_cache <- new_environment()
+
+ollama_model_details <- function(model) {
+  # https://github.com/ollama/ollama/blob/main/docs/api.md#show-model-information
+  url <- "http://localhost:11434/api/show"
+
+  if (env_has(the$ollama_cache, model)) {
+    return(the$ollama_cache[[model]])
+  }
+
+  req <- request(url)
+  req <- req_body_json(req, list(model = model, verbose = FALSE))
+
+  resp <- req_perform(req)
+
+  details <- resp_body_json(resp)
+
+  # Cache model information (very unlikely to change during a session)
+  the$ollama_cache[[model]] <- details
+  details
+}
+
+ollama_model_capabilities <- function(models) {
+  res <- map(models, function(m) {
+    tryCatch(ollama_model_details(m), error = function(e) NULL)
+  })
+  map_chr(res, \(x) paste(x$capabilities, collapse = ","))
+}
+
 
 has_ollama <- function(base_url = "http://localhost:11434") {
   tryCatch(
     {
       req <- request(base_url)
-      req <- req_url_path(req, "api/tags")
+      req <- req_url_path_append(req, "api/tags")
       req_perform(req)
       TRUE
     },

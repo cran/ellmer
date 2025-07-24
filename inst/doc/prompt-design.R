@@ -1,21 +1,13 @@
-## ----include = FALSE----------------------------------------------------------
+## -----------------------------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = ellmer:::openai_key_exists() && ellmer:::anthropic_key_exists(),
-  cache = TRUE
+  eval = ellmer:::eval_vignette()
 )
-options(ellmer_seed = 1337)
+vcr::setup_knitr()
 
 ## ----setup--------------------------------------------------------------------
 library(ellmer)
-
-## -----------------------------------------------------------------------------
-# Manually ratchet claude variability way down to hopefully make generated
-# code better match my prose.
-chat_anthropic <- function(...) {
-  ellmer::chat_anthropic(..., params = params(temperature = 0))
-}
 
 ## -----------------------------------------------------------------------------
 question <- "
@@ -207,7 +199,7 @@ type_ingredient <- type_object(
   unit = type_string("Unit of measurement")
 )
 
-type_ingredients <- type_array(items = type_ingredient)
+type_ingredients <- type_array(type_ingredient)
 
 chat <- chat_openai(c(instruct_json, instruct_weight))
 chat$chat_structured(ingredients, type = type_ingredients)

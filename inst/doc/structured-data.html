@@ -48,8 +48,9 @@ overflow: visible;
 }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -60,7 +61,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -353,10 +354,10 @@ the LLM ensures that’s what you’ll get back.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(ellmer)</span></code></pre></div>
 <div id="structured-data-basics" class="section level2">
 <h2>Structured data basics</h2>
-<p>To extract structured data you call <code>$chat_structured()</code>
-instead of the <code>$chat()</code> method. You’ll also need to define a
-type specification that describes the structure of the data that you
-want (more on that shortly). Here’s a simple example that extracts two
+<p>To extract structured data call <code>$chat_structured()</code>
+instead of <code>$chat()</code>. You’ll also need to define a type
+specification that describes the structure of the data that you want
+(more on that shortly). Here’s a simple example that extracts two
 specific values from a string:</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
@@ -381,15 +382,15 @@ specific values from a string:</p>
 <span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  )</span>
 <span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>)</span>
 <span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; $primary_shape</span></span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; [1] &quot;the image consists of a large gray oval with a bold blue letter &#39;R&#39; overlaid on it&quot;</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; [1] &quot;letter and oval&quot;</span></span>
 <span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; $primary_colour</span></span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; [1] &quot;gray (oval), blue (letter R)&quot;</span></span></code></pre></div>
-<p>If you need to extract data from multiple prompts, you can use the
-same techniques with <code>parallel_chat_structured()</code>. It takes
-the same arguments as <code>$chat_structured()</code> with two
-exceptions: it needs a <code>chat</code> object since it’s a standalone
-function, not a method, and it can take a vector of prompts.</p>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; [1] &quot;blue and gray&quot;</span></span></code></pre></div>
+<p>If you need to extract data from multiple prompts, you can use
+<code>parallel_chat_structured()</code>. It takes the same arguments as
+<code>$chat_structured()</code> with two exceptions: it needs a
+<code>chat</code> object since it’s a standalone function, not a method,
+and it can take a vector of prompts.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>prompts <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="st">&quot;I go by Alex. 42 years on this planet and counting.&quot;</span>,</span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="st">&quot;Pleased to meet you! I&#39;m Jamal, age 27.&quot;</span>,</span>
@@ -398,84 +399,193 @@ function, not a method, and it can take a vector of prompts.</p>
 <span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="st">&quot;The name&#39;s Robert - 51 years old and proud of it.&quot;</span>,</span>
 <span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="st">&quot;Kwame here - just hit the big 5-0 this year.&quot;</span></span>
 <span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>)</span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="fu">parallel_chat_structured</span>(</span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  chat,  </span>
-<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>  prompts,</span>
-<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  <span class="at">type =</span> <span class="fu">type_object</span>(</span>
-<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>    <span class="at">name =</span> <span class="fu">type_string</span>(),</span>
-<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>    <span class="at">age =</span> <span class="fu">type_number</span>()</span>
-<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>  )</span>
-<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>)</span>
-<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt; [working] (0 + 0) -&gt; 5 -&gt; 1 | ■■■■■■                            17%</span></span>
-<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; [working] (0 + 0) -&gt; 0 -&gt; 6 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%</span></span>
-<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt;     name age</span></span>
-<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt; 1   Alex  42</span></span>
-<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt; 2  Jamal  27</span></span>
-<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt; 3 Li Wei  19</span></span>
-<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="co">#&gt; 4 Fatima  35</span></span>
-<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt; 5 Robert  51</span></span>
-<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt; 6  Kwame  50</span></span></code></pre></div>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>type_person <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  <span class="at">name =</span> <span class="fu">type_string</span>(),</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>  <span class="at">age =</span> <span class="fu">type_number</span>()</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>)</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="fu">parallel_chat_structured</span>(chat, prompts, <span class="at">type =</span> type_person)</span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt;     name age</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt; 1   Alex  42</span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; 2  Jamal  27</span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt; 3 Li Wei  19</span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt; 4 Fatima  35</span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt; 5 Robert  51</span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt; 6  Kwame  50</span></span></code></pre></div>
+<p>(Note that structured data extraction automatically disables tool
+calling. You can work around this limitation by doing a regular
+<code>$chat()</code> and then using
+<code>$chat_structured()</code>.)</p>
 </div>
-<div id="data-types-basics" class="section level2">
-<h2>Data types basics</h2>
-<p>To define your desired type specification (also known as a
-<strong>schema</strong>), you use the <code>type_()</code> functions.
-(You might already be familiar with these if you’ve done any function
-calling, as discussed in <code>vignette(&quot;function-calling&quot;)</code>). The
-type functions can be divided into three main groups:</p>
+<div id="data-types" class="section level2">
+<h2>Data types</h2>
+<p>To extract structured data effectively, you need to understand how
+LLMs expect types to be defined, and how those types map to the R types
+you are familiar with.</p>
+<div id="basics" class="section level3">
+<h3>Basics</h3>
+<p>To define your desired type specification (also known as a schema),
+you use the <code>type_()</code> functions. These are also used for tool
+calling (<code>vignette(&quot;tool-calling&quot;)</code>), so you might already be
+familiar with them.The type functions can be divided into three main
+groups:</p>
 <ul>
-<li><p><strong>Scalars</strong> represent five types of single values,
+<li><p><strong>Scalars</strong> represent single values. These are
 <code>type_boolean()</code>, <code>type_integer()</code>,
 <code>type_number()</code>, <code>type_string()</code>, and
 <code>type_enum()</code>, which represent a single logical, integer,
 double, string, and factor value respectively.</p></li>
-<li><p><strong>Arrays</strong> represent any number of values of the
-same type. They are created with <code>type_array()</code>. You must
-always supply the <code>item</code> argument which specifies the type
-for each individual element. Arrays of scalars are very similar to R’s
-atomic vectors:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>type_logical_vector <span class="ot">&lt;-</span> <span class="fu">type_array</span>(<span class="at">items =</span> <span class="fu">type_boolean</span>())</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>type_integer_vector <span class="ot">&lt;-</span> <span class="fu">type_array</span>(<span class="at">items =</span> <span class="fu">type_integer</span>())</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>type_double_vector <span class="ot">&lt;-</span> <span class="fu">type_array</span>(<span class="at">items =</span> <span class="fu">type_number</span>())</span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>type_character_vector <span class="ot">&lt;-</span> <span class="fu">type_array</span>(<span class="at">items =</span> <span class="fu">type_string</span>())</span></code></pre></div>
-<p>You can also have arrays of arrays and arrays of objects, which more
-closely resemble lists with well defined structures:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>list_of_integers <span class="ot">&lt;-</span> <span class="fu">type_array</span>(<span class="at">items =</span> type_integer_vector)</span></code></pre></div></li>
+<li><p><strong>Arrays</strong> represent a vector of values of the same
+type. They are created with <code>type_array()</code> and require the
+<code>item</code> argument which specifies the type of each element.
+Arrays of scalars are very similar to R’s atomic vectors:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>type_logical_vector <span class="ot">&lt;-</span> <span class="fu">type_array</span>(<span class="fu">type_boolean</span>())</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>type_integer_vector <span class="ot">&lt;-</span> <span class="fu">type_array</span>(<span class="fu">type_integer</span>())</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>type_double_vector <span class="ot">&lt;-</span> <span class="fu">type_array</span>(<span class="fu">type_number</span>())</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>type_character_vector <span class="ot">&lt;-</span> <span class="fu">type_array</span>(<span class="fu">type_string</span>())</span></code></pre></div>
+<p>You can also have arrays of arrays resemble lists with well defined
+structures:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>list_of_integers <span class="ot">&lt;-</span> <span class="fu">type_array</span>(type_integer_vector)</span></code></pre></div>
+<p>Arrays of objects (described next) are equivalent to data
+frames.</p></li>
 <li><p><strong>Objects</strong> represent a collection of named values.
 They are created with <code>type_object()</code>. Objects can contain
 any number of scalars, arrays, and other objects. They are similar to
 named lists in R.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>type_person <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>type_person2 <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
 <span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  <span class="at">name =</span> <span class="fu">type_string</span>(),</span>
 <span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="at">age =</span> <span class="fu">type_integer</span>(),</span>
-<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">hobbies =</span> <span class="fu">type_array</span>(<span class="at">items =</span> <span class="fu">type_string</span>())</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">hobbies =</span> <span class="fu">type_array</span>(<span class="fu">type_string</span>())</span>
 <span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>)</span></code></pre></div></li>
 </ul>
-<p>Using these type specifications ensures that the LLM will return
-JSON. But ellmer goes one step further to convert the results to the
-closest R analog. Currently, this converts arrays of boolean, integers,
-numbers, and strings into logical, integer, numeric, and character
-vectors. Arrays of objects are converted into data frames. You can
-opt-out of this and get plain lists by setting
-<code>convert = FALSE</code> in <code>$chat_structured()</code>.</p>
+<p>Under the hood, these type specifications ensures that the LLM
+returns correctly structured JSON. But ellmer goes one step further and
+converts the JSON to the closest R analog. This means:</p>
+<ul>
+<li>Scalars are converted to length-1 vectors.</li>
+<li>Arrays of scalars are converted to vectors.</li>
+<li>Arrays of arrays are converted to unnamed lists.</li>
+<li>Objects are converted to named lists.</li>
+<li>Arrays of objects are converted to data frames.</li>
+</ul>
+<p>You can opt-out of this and get plain lists by setting
+<code>convert = FALSE</code>.</p>
 <p>In addition to defining types, you need to provide the LLM with some
-information about what you actually want. This is the purpose of the
-first argument, <code>description</code>, which is a string that
-describes the data that you want. This is a good place to ask nicely for
-other attributes you’ll like the value to have (e.g. minimum or maximum
+information about what those types represent. This is the purpose of the
+first argument, <code>description</code>, a string that describes the
+data that you want. This is a good place to ask nicely for other
+attributes you’ll like the value to have (e.g. minimum or maximum
 values, date formats, …). There’s no guarantee that these requests will
-be honoured, but the LLM will usually make a best effort to do so.</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>type_type_person <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
+be honoured, but the LLM will try.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>type_person3 <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
 <span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  <span class="st">&quot;A person&quot;</span>,</span>
 <span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="at">name =</span> <span class="fu">type_string</span>(<span class="st">&quot;Name&quot;</span>),</span>
 <span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="at">age =</span> <span class="fu">type_integer</span>(<span class="st">&quot;Age, in years.&quot;</span>),</span>
 <span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="at">hobbies =</span> <span class="fu">type_array</span>(</span>
-<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>    <span class="st">&quot;List of hobbies. Should be exclusive and brief.&quot;</span>,</span>
-<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>    <span class="at">items =</span> <span class="fu">type_string</span>()</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>    <span class="fu">type_string</span>(),</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>    <span class="st">&quot;List of hobbies. Should be exclusive and brief.&quot;</span>,</span>
 <span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>  )</span>
 <span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>)</span></code></pre></div>
-<p>Now we’ll dive into some examples before coming back to talk more
-about the details of data types.</p>
+</div>
+<div id="missing-values" class="section level3">
+<h3>Missing values</h3>
+<p>The type functions default to <code>required = TRUE</code> which
+means the LLM will try really hard to extract values for you, leading to
+hallucinations if the data doesn’t exist. Lets go back to our initial
+example extracting names and ages, and give it some inputs that don’t
+have names and/or ages.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>no_match <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  <span class="st">&quot;I like apples&quot;</span>,</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>  <span class="st">&quot;What time is it?&quot;</span>,</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>  <span class="st">&quot;This cheese is 3 years old&quot;</span>,</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>  <span class="st">&quot;My name is Hadley.&quot;</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>)</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="fu">parallel_chat_structured</span>(chat, no_match, <span class="at">type =</span> type_person)</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt;      name age</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt; 1 Unknown   0</span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt; 2    &lt;NA&gt;  NA</span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt; 3  cheese   3</span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt; 4  Hadley   0</span></span></code></pre></div>
+<p>You can often avoid this problem by setting
+<code>required = FALSE</code>:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>type_person <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>  <span class="at">name =</span> <span class="fu">type_string</span>(<span class="at">required =</span> <span class="cn">FALSE</span>),</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>  <span class="at">age =</span> <span class="fu">type_number</span>(<span class="at">required =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>)</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="fu">parallel_chat_structured</span>(chat, no_match, <span class="at">type =</span> type_person)</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co">#&gt;     name age</span></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co">#&gt; 1   &lt;NA&gt;  NA</span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; 2   &lt;NA&gt;  NA</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="co">#&gt; 3 cheese   3</span></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co">#&gt; 4 Hadley  NA</span></span></code></pre></div>
+<p>In other cases, you may need to adjust your prompt as well. Either
+way, we strongly recommend that you include both positive and negative
+examples when testing your structured data extraction code.</p>
+</div>
+<div id="data-frames" class="section level3">
+<h3>Data frames</h3>
+<p>In most cases, you’ll get a data frame because you are using
+<code>parallel_chat_structured()</code>, where each output row
+represents one input prompt. In other cases, you might have a more
+complex document where you want a data frame from a single prompt. For
+example, imagine that you want to extract some data about people from a
+table:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>prompt <span class="ot">&lt;-</span> r<span class="st">&quot;(</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="st">* John Smith. Age: 30. Height: 180 cm. Weight: 80 kg.</span></span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="st">* Jane Doe. Age: 25. Height: 5&#39;5&quot;</span>. Weight<span class="sc">:</span> <span class="dv">110</span> lb.</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="sc">*</span> Jose Rodriguez. Age<span class="sc">:</span> <span class="fl">40.</span> Height<span class="sc">:</span> <span class="dv">190</span> cm. Weight<span class="sc">:</span> <span class="dv">90</span> kg.</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="sc">*</span> June Lee <span class="sc">|</span> Age<span class="sc">:</span> <span class="dv">35</span> <span class="sc">|</span> Height <span class="dv">175</span> cm <span class="sc">|</span> Weight<span class="sc">:</span> <span class="dv">70</span> kg</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="er">)</span><span class="st">&quot;</span></span></code></pre></div>
+<p>You might be tempted to use a definition similar to R: an object
+(i.e., a named list) containing multiple arrays (i.e., vectors):</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>type_people <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>  <span class="at">name =</span> <span class="fu">type_array</span>(<span class="fu">type_string</span>()),</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>  <span class="at">age =</span> <span class="fu">type_array</span>(<span class="fu">type_integer</span>()),</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>  <span class="at">height =</span> <span class="fu">type_array</span>(<span class="fu">type_number</span>(<span class="st">&quot;in m&quot;</span>)),</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>  <span class="at">weight =</span> <span class="fu">type_array</span>(<span class="fu">type_number</span>(<span class="st">&quot;in kg&quot;</span>))</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>)</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat_structured</span>(prompt, <span class="at">type =</span> type_people)</span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a><span class="co">#&gt; $name</span></span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a><span class="co">#&gt; [1] &quot;John Smith&quot;     &quot;Jane Doe&quot;       &quot;Jose Rodriguez&quot; &quot;June Lee&quot;      </span></span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a><span class="co">#&gt; $age</span></span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a><span class="co">#&gt; [1] 30 25 40 35</span></span>
+<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a><span class="co">#&gt; $height</span></span>
+<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a><span class="co">#&gt; [1] 1.800 1.651 1.900 1.750</span></span>
+<span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb12-20"><a href="#cb12-20" tabindex="-1"></a><span class="co">#&gt; $weight</span></span>
+<span id="cb12-21"><a href="#cb12-21" tabindex="-1"></a><span class="co">#&gt; [1] 80.0 49.9 90.0 70.0</span></span></code></pre></div>
+<p>This doesn’t work because there’s no constraint that each array
+should have the same length, and hence no way for ellmer to know that
+you really wanted a data frame. Instead, you’ll need to turn the data
+structure “inside out” and create an array of objects:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>type_people <span class="ot">&lt;-</span> <span class="fu">type_array</span>(</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>  <span class="fu">type_object</span>(</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>    <span class="at">name =</span> <span class="fu">type_string</span>(),</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>    <span class="at">age =</span> <span class="fu">type_integer</span>(),</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>    <span class="at">height =</span> <span class="fu">type_number</span>(<span class="st">&quot;in m&quot;</span>),</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>    <span class="at">weight =</span> <span class="fu">type_number</span>(<span class="st">&quot;in kg&quot;</span>)</span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>  )</span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a>)</span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a></span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat_structured</span>(prompt, <span class="at">type =</span> type_people)</span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a><span class="co">#&gt;             name age height weight</span></span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a><span class="co">#&gt; 1     John Smith  30   1.80   80.0</span></span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a><span class="co">#&gt; 2       Jane Doe  25   1.65   49.9</span></span>
+<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a><span class="co">#&gt; 3 Jose Rodriguez  40   1.90   90.0</span></span>
+<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a><span class="co">#&gt; 4       June Lee  35   1.75   70.0</span></span></code></pre></div>
+<p>Now ellmer knows what you want and gives you a data frame.</p>
+<p>If you’re familiar with the terms row-oriented and column-oriented
+data frames, this is the same idea. Since most languages don’t possess
+vectorisation like R, row-oriented data frames are more common.</p>
+</div>
 </div>
 <div id="examples" class="section level2">
 <h2>Examples</h2>
@@ -484,146 +594,153 @@ inspired by the Claude documentation</a>, hint at some of the ways you
 can use structured data extraction.</p>
 <div id="example-1-article-summarisation" class="section level3">
 <h3>Example 1: Article summarisation</h3>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>text <span class="ot">&lt;-</span> <span class="fu">readLines</span>(<span class="fu">system.file</span>(<span class="st">&quot;examples/third-party-testing.txt&quot;</span>, <span class="at">package =</span> <span class="st">&quot;ellmer&quot;</span>))</span>
-<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="co"># url &lt;- &quot;https://www.anthropic.com/news/third-party-testing&quot;</span></span>
-<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co"># html &lt;- rvest::read_html(url)</span></span>
-<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co"># text &lt;- rvest::html_text2(rvest::html_element(html, &quot;article&quot;))</span></span>
-<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a></span>
-<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>type_summary <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
-<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>  <span class="st">&quot;Summary of the article.&quot;</span>,</span>
-<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>  <span class="at">author =</span> <span class="fu">type_string</span>(<span class="st">&quot;Name of the article author&quot;</span>),</span>
-<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>  <span class="at">topics =</span> <span class="fu">type_array</span>(</span>
-<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>    <span class="st">&#39;Array of topics, e.g. [&quot;tech&quot;, &quot;politics&quot;]. Should be as specific as possible, and can overlap.&#39;</span>,</span>
-<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>    <span class="fu">type_string</span>(),</span>
-<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a>  ),</span>
-<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a>  <span class="at">summary =</span> <span class="fu">type_string</span>(<span class="st">&quot;Summary of the article. One or two paragraphs max&quot;</span>),</span>
-<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a>  <span class="at">coherence =</span> <span class="fu">type_integer</span>(<span class="st">&quot;Coherence of the article&#39;s key points, 0-100 (inclusive)&quot;</span>),</span>
-<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a>  <span class="at">persuasion =</span> <span class="fu">type_number</span>(<span class="st">&quot;Article&#39;s persuasion score, 0.0-1.0 (inclusive)&quot;</span>)</span>
-<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a>)</span>
-<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a></span>
-<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
-<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
-<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a>data <span class="ot">&lt;-</span> chat<span class="sc">$</span><span class="fu">chat_structured</span>(text, <span class="at">type =</span> type_summary)</span>
-<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="fu">cat</span>(data<span class="sc">$</span>summary)</span>
-<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt; This article argues that effective, broadly trusted third-party testing and evaluation regimes are essential for the safe deployment and governance of frontier AI systems. Anthropic proposes that self-governance and company-led safety policies, like their Responsible Scaling Policy (RSP), are necessary but not sufficient; independent, third-party testing—spanning government agencies, academia, and private contractors—is needed to ensure AI models do not cause accidental or deliberate harm. The article details reasons for needing such a regime, including AI&#39;s general-purpose nature, emergent risks, and the precedent from other sectors (food, medicine, etc.). </span></span>
-<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt; Anthropic outlines the principles for creating fair and effective third-party testing systems: precise scope to avoid over-burdening small companies, application mainly to high-compute frontier models, and the inclusion of various actors (government, academia, private). They emphasize that such a system will help avoid catastrophic incidents and knee-jerk regulation, foster public trust, and mitigate risks like regulatory capture and undue barriers to competition. The article also discusses the importance of openly accessible models, scenario planning, and the challenges around regulation and open-source AI. Anthropic commits to proactive steps: prototyping testing, red teaming, supporting government funding of institutions like NIST, and advocating for balanced, minimal but effective policy. Ultimately, they view third-party testing as a cornerstone for responsible AI oversight and hope to inspire broader societal standards and critique.</span></span>
-<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a></span>
-<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="fu">str</span>(data)</span>
-<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a><span class="co">#&gt; List of 5</span></span>
-<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="co">#&gt;  $ author    : chr &quot;Anthropic Policy Team (unspecified individual)&quot;</span></span>
-<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="co">#&gt;  $ topics    : chr [1:11] &quot;AI policy&quot; &quot;third-party testing&quot; &quot;AI safety&quot; &quot;regulation&quot; ...</span></span>
-<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a><span class="co">#&gt;  $ summary   : chr &quot;This article argues that effective, broadly trusted third-party testing and evaluation regimes are essential fo&quot;| __truncated__</span></span>
-<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a><span class="co">#&gt;  $ coherence : int 92</span></span>
-<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a><span class="co">#&gt;  $ persuasion: num 0.82</span></span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>text <span class="ot">&lt;-</span> <span class="fu">readLines</span>(<span class="fu">system.file</span>(</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>  <span class="st">&quot;examples/third-party-testing.txt&quot;</span>,</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>  <span class="at">package =</span> <span class="st">&quot;ellmer&quot;</span></span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>))</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a><span class="co"># url &lt;- &quot;https://www.anthropic.com/news/third-party-testing&quot;</span></span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a><span class="co"># html &lt;- rvest::read_html(url)</span></span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="co"># text &lt;- rvest::html_text2(rvest::html_element(html, &quot;article&quot;))</span></span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a></span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a>type_summary <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a>  <span class="st">&quot;Summary of the article.&quot;</span>,</span>
+<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a>  <span class="at">author =</span> <span class="fu">type_string</span>(<span class="st">&quot;Name of the article author&quot;</span>),</span>
+<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a>  <span class="at">topics =</span> <span class="fu">type_array</span>(</span>
+<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a>    <span class="fu">type_string</span>(),</span>
+<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a>    <span class="st">&#39;Array of topics, e.g. [&quot;tech&quot;, &quot;politics&quot;]. Should be as specific as possible, and can overlap.&#39;</span></span>
+<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a>  ),</span>
+<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a>  <span class="at">summary =</span> <span class="fu">type_string</span>(<span class="st">&quot;Summary of the article. One or two paragraphs max&quot;</span>),</span>
+<span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a>  <span class="at">coherence =</span> <span class="fu">type_integer</span>(</span>
+<span id="cb14-18"><a href="#cb14-18" tabindex="-1"></a>    <span class="st">&quot;Coherence of the article&#39;s key points, 0-100 (inclusive)&quot;</span></span>
+<span id="cb14-19"><a href="#cb14-19" tabindex="-1"></a>  ),</span>
+<span id="cb14-20"><a href="#cb14-20" tabindex="-1"></a>  <span class="at">persuasion =</span> <span class="fu">type_number</span>(<span class="st">&quot;Article&#39;s persuasion score, 0.0-1.0 (inclusive)&quot;</span>)</span>
+<span id="cb14-21"><a href="#cb14-21" tabindex="-1"></a>)</span>
+<span id="cb14-22"><a href="#cb14-22" tabindex="-1"></a></span>
+<span id="cb14-23"><a href="#cb14-23" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
+<span id="cb14-24"><a href="#cb14-24" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
+<span id="cb14-25"><a href="#cb14-25" tabindex="-1"></a>data <span class="ot">&lt;-</span> chat<span class="sc">$</span><span class="fu">chat_structured</span>(text, <span class="at">type =</span> type_summary)</span>
+<span id="cb14-26"><a href="#cb14-26" tabindex="-1"></a><span class="fu">cat</span>(data<span class="sc">$</span>summary)</span>
+<span id="cb14-27"><a href="#cb14-27" tabindex="-1"></a><span class="co">#&gt; The article argues that effective third-party testing is essential to AI policy for managing the risks and societal impacts of frontier AI systems such as large-scale generative models. Anthropic promotes a regime where AI models, especially the most powerful and general-purpose ones, undergo third-party evaluation to ensure safety, limit misuse (in domains like election integrity and national security), and build public trust. The article details what a robust third-party testing regime should include: trusted tests, credible assessors, and a balance between safety assurance and regulatory burden. It advocates for multi-actor involvement (companies, universities, governments), iterative prototyping, and funding for governmental infrastructure to drive effective regulation while avoiding overly burdensome procedures that stifle innovation or entrench large incumbents. The article emphasizes the need to balance openness in AI research, the necessity for safety-related limits on open dissemination of powerful models, and the risks of regulatory capture. Anthropic outlines its own contributions and affirms a cautious, feedback-driven approach to advocating AI policy. Ultimately, third-party testing is positioned as a linchpin for safe and trustworthy AI development.</span></span>
+<span id="cb14-28"><a href="#cb14-28" tabindex="-1"></a></span>
+<span id="cb14-29"><a href="#cb14-29" tabindex="-1"></a><span class="fu">str</span>(data)</span>
+<span id="cb14-30"><a href="#cb14-30" tabindex="-1"></a><span class="co">#&gt; List of 5</span></span>
+<span id="cb14-31"><a href="#cb14-31" tabindex="-1"></a><span class="co">#&gt;  $ author    : chr &quot;Anthropic (not specified by individual name)&quot;</span></span>
+<span id="cb14-32"><a href="#cb14-32" tabindex="-1"></a><span class="co">#&gt;  $ topics    : chr [1:9] &quot;AI policy&quot; &quot;AI safety&quot; &quot;third-party testing&quot; &quot;AI regulation&quot; ...</span></span>
+<span id="cb14-33"><a href="#cb14-33" tabindex="-1"></a><span class="co">#&gt;  $ summary   : chr &quot;The article argues that effective third-party testing is essential to AI policy for managing the risks and soci&quot;| __truncated__</span></span>
+<span id="cb14-34"><a href="#cb14-34" tabindex="-1"></a><span class="co">#&gt;  $ coherence : int 95</span></span>
+<span id="cb14-35"><a href="#cb14-35" tabindex="-1"></a><span class="co">#&gt;  $ persuasion: num 0.91</span></span></code></pre></div>
 </div>
 <div id="example-2-named-entity-recognition" class="section level3">
 <h3>Example 2: Named entity recognition</h3>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>text <span class="ot">&lt;-</span> <span class="st">&quot;</span></span>
-<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="st">  John works at Google in New York. He met with Sarah, the CEO of</span></span>
-<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="st">  Acme Inc., last week in San Francisco.</span></span>
-<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="st">&quot;</span></span>
-<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a></span>
-<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>type_named_entity <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
-<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>  <span class="at">name =</span> <span class="fu">type_string</span>(<span class="st">&quot;The extracted entity name.&quot;</span>),</span>
-<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>  <span class="at">type =</span> <span class="fu">type_enum</span>(<span class="st">&quot;The entity type&quot;</span>, <span class="fu">c</span>(<span class="st">&quot;person&quot;</span>, <span class="st">&quot;location&quot;</span>, <span class="st">&quot;organization&quot;</span>)),</span>
-<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>  <span class="at">context =</span> <span class="fu">type_string</span>(<span class="st">&quot;The context in which the entity appears in the text.&quot;</span>)</span>
-<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>)</span>
-<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a>type_named_entities <span class="ot">&lt;-</span> <span class="fu">type_array</span>(<span class="at">items =</span> type_named_entity)</span>
-<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a></span>
-<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
-<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
-<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat_structured</span>(text, <span class="at">type =</span> type_named_entities)</span>
-<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a><span class="co">#&gt;            name         type</span></span>
-<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a><span class="co">#&gt; 1          John       person</span></span>
-<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a><span class="co">#&gt; 2        Google organization</span></span>
-<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a><span class="co">#&gt; 3      New York     location</span></span>
-<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a><span class="co">#&gt; 4         Sarah       person</span></span>
-<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a><span class="co">#&gt; 5     Acme Inc. organization</span></span>
-<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a><span class="co">#&gt; 6 San Francisco     location</span></span>
-<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a><span class="co">#&gt;                                                              context</span></span>
-<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a><span class="co">#&gt; 1                John is mentioned as working at Google in New York.</span></span>
-<span id="cb10-25"><a href="#cb10-25" tabindex="-1"></a><span class="co">#&gt; 2               Google is mentioned as the company where John works.</span></span>
-<span id="cb10-26"><a href="#cb10-26" tabindex="-1"></a><span class="co">#&gt; 3      New York is mentioned as the city where John works at Google.</span></span>
-<span id="cb10-27"><a href="#cb10-27" tabindex="-1"></a><span class="co">#&gt; 4         Sarah is mentioned as the CEO of Acme Inc., whom John met.</span></span>
-<span id="cb10-28"><a href="#cb10-28" tabindex="-1"></a><span class="co">#&gt; 5      Acme Inc. is mentioned as the company where Sarah is the CEO.</span></span>
-<span id="cb10-29"><a href="#cb10-29" tabindex="-1"></a><span class="co">#&gt; 6 San Francisco is mentioned as the place where John met with Sarah.</span></span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a>text <span class="ot">&lt;-</span> <span class="st">&quot;</span></span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a><span class="st">  John works at Google in New York. He met with Sarah, the CEO of</span></span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a><span class="st">  Acme Inc., last week in San Francisco.</span></span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="st">&quot;</span></span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a></span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>type_named_entity <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a>  <span class="at">name =</span> <span class="fu">type_string</span>(<span class="st">&quot;The extracted entity name.&quot;</span>),</span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a>  <span class="at">type =</span> <span class="fu">type_enum</span>(<span class="fu">c</span>(<span class="st">&quot;person&quot;</span>, <span class="st">&quot;location&quot;</span>, <span class="st">&quot;organization&quot;</span>), <span class="st">&quot;The entity type&quot;</span>),</span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a>  <span class="at">context =</span> <span class="fu">type_string</span>(<span class="st">&quot;The context in which the entity appears in the text.&quot;</span>)</span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a>)</span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a>type_named_entities <span class="ot">&lt;-</span> <span class="fu">type_array</span>(type_named_entity)</span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a></span>
+<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
+<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
+<span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat_structured</span>(text, <span class="at">type =</span> type_named_entities)</span>
+<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a><span class="co">#&gt;            name         type                                          context</span></span>
+<span id="cb15-17"><a href="#cb15-17" tabindex="-1"></a><span class="co">#&gt; 1          John       person                John works at Google in New York.</span></span>
+<span id="cb15-18"><a href="#cb15-18" tabindex="-1"></a><span class="co">#&gt; 2        Google organization                John works at Google in New York.</span></span>
+<span id="cb15-19"><a href="#cb15-19" tabindex="-1"></a><span class="co">#&gt; 3      New York     location                John works at Google in New York.</span></span>
+<span id="cb15-20"><a href="#cb15-20" tabindex="-1"></a><span class="co">#&gt; 4         Sarah       person          He met with Sarah, the CEO of Acme Inc.</span></span>
+<span id="cb15-21"><a href="#cb15-21" tabindex="-1"></a><span class="co">#&gt; 5     Acme Inc. organization                      Sarah, the CEO of Acme Inc.</span></span>
+<span id="cb15-22"><a href="#cb15-22" tabindex="-1"></a><span class="co">#&gt; 6 San Francisco     location He met with Sarah... last week in San Francisco.</span></span></code></pre></div>
 </div>
 <div id="example-3-sentiment-analysis" class="section level3">
 <h3>Example 3: Sentiment analysis</h3>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>text <span class="ot">&lt;-</span> <span class="st">&quot;</span></span>
-<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="st">  The product was okay, but the customer service was terrible. I probably</span></span>
-<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="st">  won&#39;t buy from them again.</span></span>
-<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="st">&quot;</span></span>
-<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a></span>
-<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a>type_sentiment <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
-<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>  <span class="st">&quot;Extract the sentiment scores of a given text. Sentiment scores should sum to 1.&quot;</span>,</span>
-<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a>  <span class="at">positive_score =</span> <span class="fu">type_number</span>(<span class="st">&quot;Positive sentiment score, ranging from 0.0 to 1.0.&quot;</span>),</span>
-<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a>  <span class="at">negative_score =</span> <span class="fu">type_number</span>(<span class="st">&quot;Negative sentiment score, ranging from 0.0 to 1.0.&quot;</span>),</span>
-<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a>  <span class="at">neutral_score =</span> <span class="fu">type_number</span>(<span class="st">&quot;Neutral sentiment score, ranging from 0.0 to 1.0.&quot;</span>)</span>
-<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a>)</span>
-<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a></span>
-<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
-<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
-<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a><span class="fu">str</span>(chat<span class="sc">$</span><span class="fu">chat_structured</span>(text, <span class="at">type =</span> type_sentiment))</span>
-<span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a><span class="co">#&gt; List of 3</span></span>
-<span id="cb11-17"><a href="#cb11-17" tabindex="-1"></a><span class="co">#&gt;  $ positive_score: num 0.05</span></span>
-<span id="cb11-18"><a href="#cb11-18" tabindex="-1"></a><span class="co">#&gt;  $ negative_score: num 0.75</span></span>
-<span id="cb11-19"><a href="#cb11-19" tabindex="-1"></a><span class="co">#&gt;  $ neutral_score : num 0.2</span></span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a>text <span class="ot">&lt;-</span> <span class="st">&quot;</span></span>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a><span class="st">  The product was okay, but the customer service was terrible. I probably</span></span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a><span class="st">  won&#39;t buy from them again.</span></span>
+<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a><span class="st">&quot;</span></span>
+<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a></span>
+<span id="cb16-6"><a href="#cb16-6" tabindex="-1"></a>type_sentiment <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
+<span id="cb16-7"><a href="#cb16-7" tabindex="-1"></a>  <span class="st">&quot;Extract the sentiment scores of a given text. Sentiment scores should sum to 1.&quot;</span>,</span>
+<span id="cb16-8"><a href="#cb16-8" tabindex="-1"></a>  <span class="at">positive_score =</span> <span class="fu">type_number</span>(</span>
+<span id="cb16-9"><a href="#cb16-9" tabindex="-1"></a>    <span class="st">&quot;Positive sentiment score, ranging from 0.0 to 1.0.&quot;</span></span>
+<span id="cb16-10"><a href="#cb16-10" tabindex="-1"></a>  ),</span>
+<span id="cb16-11"><a href="#cb16-11" tabindex="-1"></a>  <span class="at">negative_score =</span> <span class="fu">type_number</span>(</span>
+<span id="cb16-12"><a href="#cb16-12" tabindex="-1"></a>    <span class="st">&quot;Negative sentiment score, ranging from 0.0 to 1.0.&quot;</span></span>
+<span id="cb16-13"><a href="#cb16-13" tabindex="-1"></a>  ),</span>
+<span id="cb16-14"><a href="#cb16-14" tabindex="-1"></a>  <span class="at">neutral_score =</span> <span class="fu">type_number</span>(</span>
+<span id="cb16-15"><a href="#cb16-15" tabindex="-1"></a>    <span class="st">&quot;Neutral sentiment score, ranging from 0.0 to 1.0.&quot;</span></span>
+<span id="cb16-16"><a href="#cb16-16" tabindex="-1"></a>  )</span>
+<span id="cb16-17"><a href="#cb16-17" tabindex="-1"></a>)</span>
+<span id="cb16-18"><a href="#cb16-18" tabindex="-1"></a></span>
+<span id="cb16-19"><a href="#cb16-19" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
+<span id="cb16-20"><a href="#cb16-20" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
+<span id="cb16-21"><a href="#cb16-21" tabindex="-1"></a><span class="fu">str</span>(chat<span class="sc">$</span><span class="fu">chat_structured</span>(text, <span class="at">type =</span> type_sentiment))</span>
+<span id="cb16-22"><a href="#cb16-22" tabindex="-1"></a><span class="co">#&gt; List of 3</span></span>
+<span id="cb16-23"><a href="#cb16-23" tabindex="-1"></a><span class="co">#&gt;  $ positive_score: num 0.05</span></span>
+<span id="cb16-24"><a href="#cb16-24" tabindex="-1"></a><span class="co">#&gt;  $ negative_score: num 0.7</span></span>
+<span id="cb16-25"><a href="#cb16-25" tabindex="-1"></a><span class="co">#&gt;  $ neutral_score : num 0.25</span></span></code></pre></div>
 <p>Note that while we’ve asked nicely for the scores to sum 1, which
 they do in this example (at least when I ran the code), this is not
 guaranteed.</p>
 </div>
 <div id="example-4-text-classification" class="section level3">
 <h3>Example 4: Text classification</h3>
-<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>text <span class="ot">&lt;-</span> <span class="st">&quot;The new quantum computing breakthrough could revolutionize the tech industry.&quot;</span></span>
-<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a></span>
-<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>type_classification <span class="ot">&lt;-</span> <span class="fu">type_array</span>(</span>
-<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>  <span class="st">&quot;Array of classification results. The scores should sum to 1.&quot;</span>,</span>
-<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>  <span class="fu">type_object</span>(</span>
-<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>    <span class="at">name =</span> <span class="fu">type_enum</span>(</span>
-<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>      <span class="st">&quot;The category name&quot;</span>,</span>
-<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>      <span class="at">values =</span> <span class="fu">c</span>(</span>
-<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a>        <span class="st">&quot;Politics&quot;</span>,</span>
-<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a>        <span class="st">&quot;Sports&quot;</span>,</span>
-<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a>        <span class="st">&quot;Technology&quot;</span>,</span>
-<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a>        <span class="st">&quot;Entertainment&quot;</span>,</span>
-<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a>        <span class="st">&quot;Business&quot;</span>,</span>
-<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a>        <span class="st">&quot;Other&quot;</span></span>
-<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a>      )</span>
-<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a>    ),</span>
-<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a>    <span class="at">score =</span> <span class="fu">type_number</span>(</span>
-<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a>      <span class="st">&quot;The classification score for the category, ranging from 0.0 to 1.0.&quot;</span></span>
-<span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a>    )</span>
-<span id="cb12-20"><a href="#cb12-20" tabindex="-1"></a>  )</span>
-<span id="cb12-21"><a href="#cb12-21" tabindex="-1"></a>)</span>
-<span id="cb12-22"><a href="#cb12-22" tabindex="-1"></a></span>
-<span id="cb12-23"><a href="#cb12-23" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
-<span id="cb12-24"><a href="#cb12-24" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
-<span id="cb12-25"><a href="#cb12-25" tabindex="-1"></a>data <span class="ot">&lt;-</span> chat<span class="sc">$</span><span class="fu">chat_structured</span>(text, <span class="at">type =</span> type_classification)</span>
-<span id="cb12-26"><a href="#cb12-26" tabindex="-1"></a>data</span>
-<span id="cb12-27"><a href="#cb12-27" tabindex="-1"></a><span class="co">#&gt;         name score</span></span>
-<span id="cb12-28"><a href="#cb12-28" tabindex="-1"></a><span class="co">#&gt; 1 Technology     1</span></span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a>text <span class="ot">&lt;-</span> <span class="st">&quot;The new quantum computing breakthrough could revolutionize the tech industry.&quot;</span></span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a></span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>type_score <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>  <span class="at">name =</span> <span class="fu">type_enum</span>(</span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a>    <span class="fu">c</span>(</span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a>      <span class="st">&quot;Politics&quot;</span>,</span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a>      <span class="st">&quot;Sports&quot;</span>,</span>
+<span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a>      <span class="st">&quot;Technology&quot;</span>,</span>
+<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a>      <span class="st">&quot;Entertainment&quot;</span>,</span>
+<span id="cb17-10"><a href="#cb17-10" tabindex="-1"></a>      <span class="st">&quot;Business&quot;</span>,</span>
+<span id="cb17-11"><a href="#cb17-11" tabindex="-1"></a>      <span class="st">&quot;Other&quot;</span></span>
+<span id="cb17-12"><a href="#cb17-12" tabindex="-1"></a>    ),</span>
+<span id="cb17-13"><a href="#cb17-13" tabindex="-1"></a>    <span class="st">&quot;The category name&quot;</span>,</span>
+<span id="cb17-14"><a href="#cb17-14" tabindex="-1"></a>  ),</span>
+<span id="cb17-15"><a href="#cb17-15" tabindex="-1"></a>  <span class="at">score =</span> <span class="fu">type_number</span>(</span>
+<span id="cb17-16"><a href="#cb17-16" tabindex="-1"></a>    <span class="st">&quot;The classification score for the category, ranging from 0.0 to 1.0.&quot;</span></span>
+<span id="cb17-17"><a href="#cb17-17" tabindex="-1"></a>  )</span>
+<span id="cb17-18"><a href="#cb17-18" tabindex="-1"></a>)</span>
+<span id="cb17-19"><a href="#cb17-19" tabindex="-1"></a>type_classification <span class="ot">&lt;-</span> <span class="fu">type_array</span>(</span>
+<span id="cb17-20"><a href="#cb17-20" tabindex="-1"></a>  type_score,</span>
+<span id="cb17-21"><a href="#cb17-21" tabindex="-1"></a>  <span class="at">description =</span> <span class="st">&quot;Array of classification results. The scores should sum to 1.&quot;</span></span>
+<span id="cb17-22"><a href="#cb17-22" tabindex="-1"></a>)</span>
+<span id="cb17-23"><a href="#cb17-23" tabindex="-1"></a></span>
+<span id="cb17-24"><a href="#cb17-24" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
+<span id="cb17-25"><a href="#cb17-25" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
+<span id="cb17-26"><a href="#cb17-26" tabindex="-1"></a>data <span class="ot">&lt;-</span> chat<span class="sc">$</span><span class="fu">chat_structured</span>(text, <span class="at">type =</span> type_classification)</span>
+<span id="cb17-27"><a href="#cb17-27" tabindex="-1"></a>data</span>
+<span id="cb17-28"><a href="#cb17-28" tabindex="-1"></a><span class="co">#&gt;         name score</span></span>
+<span id="cb17-29"><a href="#cb17-29" tabindex="-1"></a><span class="co">#&gt; 1 Technology  0.95</span></span>
+<span id="cb17-30"><a href="#cb17-30" tabindex="-1"></a><span class="co">#&gt; 2   Business  0.03</span></span>
+<span id="cb17-31"><a href="#cb17-31" tabindex="-1"></a><span class="co">#&gt; 3      Other  0.02</span></span></code></pre></div>
 </div>
 <div id="example-5-working-with-unknown-keys" class="section level3">
 <h3>Example 5: Working with unknown keys</h3>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>type_characteristics <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
-<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>  <span class="st">&quot;All characteristics&quot;</span>,</span>
-<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>  <span class="at">.additional_properties =</span> <span class="cn">TRUE</span></span>
-<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>)</span>
-<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a></span>
-<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>prompt <span class="ot">&lt;-</span> <span class="st">&quot;</span></span>
-<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a><span class="st">  Given a description of a character, your task is to extract all the characteristics of that character.</span></span>
-<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a></span>
-<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a><span class="st">  &lt;description&gt;</span></span>
-<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a><span class="st">  The man is tall, with a beard and a scar on his left cheek. He has a deep voice and wears a black leather jacket.</span></span>
-<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a><span class="st">  &lt;/description&gt;</span></span>
-<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a><span class="st">&quot;</span></span>
-<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a></span>
-<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_anthropic</span>()</span>
-<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-4-20250514&quot;.</span></span>
-<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a><span class="fu">str</span>(chat<span class="sc">$</span><span class="fu">chat_structured</span>(prompt, <span class="at">type =</span> type_characteristics))</span>
-<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a><span class="co">#&gt;  list()</span></span></code></pre></div>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a>type_characteristics <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
+<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a>  <span class="st">&quot;All characteristics&quot;</span>,</span>
+<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a>  <span class="at">.additional_properties =</span> <span class="cn">TRUE</span></span>
+<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a>)</span>
+<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a></span>
+<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a>text <span class="ot">&lt;-</span> <span class="st">&quot;</span></span>
+<span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a><span class="st">  The man is tall, with a beard and a scar on his left cheek. He has a deep voice and wears a black leather jacket.</span></span>
+<span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a><span class="st">&quot;</span></span>
+<span id="cb18-9"><a href="#cb18-9" tabindex="-1"></a></span>
+<span id="cb18-10"><a href="#cb18-10" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_anthropic</span>(<span class="st">&quot;Extract all characteristics of supplied character&quot;</span>)</span>
+<span id="cb18-11"><a href="#cb18-11" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-4-20250514&quot;.</span></span>
+<span id="cb18-12"><a href="#cb18-12" tabindex="-1"></a><span class="fu">str</span>(chat<span class="sc">$</span><span class="fu">chat_structured</span>(text, <span class="at">type =</span> type_characteristics))</span>
+<span id="cb18-13"><a href="#cb18-13" tabindex="-1"></a><span class="co">#&gt; List of 6</span></span>
+<span id="cb18-14"><a href="#cb18-14" tabindex="-1"></a><span class="co">#&gt;  $ gender              : chr &quot;male&quot;</span></span>
+<span id="cb18-15"><a href="#cb18-15" tabindex="-1"></a><span class="co">#&gt;  $ height              : chr &quot;tall&quot;</span></span>
+<span id="cb18-16"><a href="#cb18-16" tabindex="-1"></a><span class="co">#&gt;  $ facial_hair         : chr &quot;beard&quot;</span></span>
+<span id="cb18-17"><a href="#cb18-17" tabindex="-1"></a><span class="co">#&gt;  $ distinguishing_marks: chr &quot;scar on left cheek&quot;</span></span>
+<span id="cb18-18"><a href="#cb18-18" tabindex="-1"></a><span class="co">#&gt;  $ voice               : chr &quot;deep voice&quot;</span></span>
+<span id="cb18-19"><a href="#cb18-19" tabindex="-1"></a><span class="co">#&gt;  $ clothing            : chr &quot;black leather jacket&quot;</span></span></code></pre></div>
 <p>This example only works with Claude, not GPT or Gemini, because only
 Claude supports adding additional, arbitrary properties.</p>
 </div>
@@ -638,145 +755,53 @@ The goal is to extract structured data from this screenshot:</p>
 and “unearned” income</div>
 </div>
 <p>Even without any descriptions, ChatGPT does pretty well:</p>
-<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>type_asset <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
-<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>  <span class="at">assert_name =</span> <span class="fu">type_string</span>(),</span>
-<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>  <span class="at">owner =</span> <span class="fu">type_string</span>(),</span>
-<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>  <span class="at">location =</span> <span class="fu">type_string</span>(),</span>
-<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>  <span class="at">asset_value_low =</span> <span class="fu">type_integer</span>(),</span>
-<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>  <span class="at">asset_value_high =</span> <span class="fu">type_integer</span>(),</span>
-<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a>  <span class="at">income_type =</span> <span class="fu">type_string</span>(),</span>
-<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a>  <span class="at">income_low =</span> <span class="fu">type_integer</span>(),</span>
-<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a>  <span class="at">income_high =</span> <span class="fu">type_integer</span>(),</span>
-<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a>  <span class="at">tx_gt_1000 =</span> <span class="fu">type_boolean</span>()</span>
-<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a>)</span>
-<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a>type_assets <span class="ot">&lt;-</span> <span class="fu">type_array</span>(<span class="at">items =</span> type_asset)</span>
-<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a></span>
-<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
-<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
-<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a>image <span class="ot">&lt;-</span> <span class="fu">content_image_file</span>(<span class="st">&quot;congressional-assets.png&quot;</span>)</span>
-<span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a>data <span class="ot">&lt;-</span> chat<span class="sc">$</span><span class="fu">chat_structured</span>(image, <span class="at">type =</span> type_assets)</span>
-<span id="cb14-18"><a href="#cb14-18" tabindex="-1"></a>data</span>
-<span id="cb14-19"><a href="#cb14-19" tabindex="-1"></a><span class="co">#&gt;                            assert_name owner</span></span>
-<span id="cb14-20"><a href="#cb14-20" tabindex="-1"></a><span class="co">#&gt; 1  11 Zinfandel Lane - Home &amp; Vineyard    JT</span></span>
-<span id="cb14-21"><a href="#cb14-21" tabindex="-1"></a><span class="co">#&gt; 2 25 Point Lobos - Commercial Property    SP</span></span>
-<span id="cb14-22"><a href="#cb14-22" tabindex="-1"></a><span class="co">#&gt;                              location asset_value_low asset_value_high</span></span>
-<span id="cb14-23"><a href="#cb14-23" tabindex="-1"></a><span class="co">#&gt; 1             St. Helena/Napa, CA, US         5000001         25000000</span></span>
-<span id="cb14-24"><a href="#cb14-24" tabindex="-1"></a><span class="co">#&gt; 2 San Francisco/San Francisco, CA, US         5000001         25000000</span></span>
-<span id="cb14-25"><a href="#cb14-25" tabindex="-1"></a><span class="co">#&gt;   income_type income_low income_high tx_gt_1000</span></span>
-<span id="cb14-26"><a href="#cb14-26" tabindex="-1"></a><span class="co">#&gt; 1 Grape Sales     100001     1000000      FALSE</span></span>
-<span id="cb14-27"><a href="#cb14-27" tabindex="-1"></a><span class="co">#&gt; 2        Rent     100001     1000000      FALSE</span></span></code></pre></div>
-</div>
-</div>
-<div id="advanced-data-types" class="section level2">
-<h2>Advanced data types</h2>
-<p>Now that you’ve seen a few examples, it’s time to get into more
-specifics about data type declarations.</p>
-<div id="required-vs-optional" class="section level3">
-<h3>Required vs optional</h3>
-<p>By default, all components of an object are required. If you want to
-make some optional, set <code>required = FALSE</code>. This is a good
-idea if you don’t think your text will always contain the required
-fields as LLMs may hallucinate data in order to fulfill your spec.</p>
-<p>For example, here the LLM hallucinates a date even though there isn’t
-one in the text:</p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a>type_article <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
-<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>  <span class="st">&quot;Information about an article written in markdown&quot;</span>,</span>
-<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a>  <span class="at">title =</span> <span class="fu">type_string</span>(<span class="st">&quot;Article title&quot;</span>),</span>
-<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a>  <span class="at">author =</span> <span class="fu">type_string</span>(<span class="st">&quot;Name of the author&quot;</span>),</span>
-<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a>  <span class="at">date =</span> <span class="fu">type_string</span>(<span class="st">&quot;Date written in YYYY-MM-DD format.&quot;</span>)</span>
-<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>)</span>
-<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a></span>
-<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a>prompt <span class="ot">&lt;-</span> <span class="st">&quot;</span></span>
-<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a><span class="st">  Extract data from the following text:</span></span>
-<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a></span>
-<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a><span class="st">  &lt;text&gt;</span></span>
-<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a><span class="st">  # Structured Data</span></span>
-<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a><span class="st">  By Hadley Wickham</span></span>
-<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a></span>
-<span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a><span class="st">  When using an LLM to extract data from text or images, you can ask the chatbot to nicely format it, in JSON or any other format that you like.</span></span>
-<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a><span class="st">  &lt;/text&gt;</span></span>
-<span id="cb15-17"><a href="#cb15-17" tabindex="-1"></a><span class="st">&quot;</span></span>
-<span id="cb15-18"><a href="#cb15-18" tabindex="-1"></a></span>
-<span id="cb15-19"><a href="#cb15-19" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
-<span id="cb15-20"><a href="#cb15-20" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
-<span id="cb15-21"><a href="#cb15-21" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat_structured</span>(prompt, <span class="at">type =</span> type_article)</span>
-<span id="cb15-22"><a href="#cb15-22" tabindex="-1"></a><span class="co">#&gt; $title</span></span>
-<span id="cb15-23"><a href="#cb15-23" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Structured Data&quot;</span></span>
-<span id="cb15-24"><a href="#cb15-24" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb15-25"><a href="#cb15-25" tabindex="-1"></a><span class="co">#&gt; $author</span></span>
-<span id="cb15-26"><a href="#cb15-26" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Hadley Wickham&quot;</span></span>
-<span id="cb15-27"><a href="#cb15-27" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb15-28"><a href="#cb15-28" tabindex="-1"></a><span class="co">#&gt; $date</span></span>
-<span id="cb15-29"><a href="#cb15-29" tabindex="-1"></a><span class="co">#&gt; [1] &quot;&quot;</span></span>
-<span id="cb15-30"><a href="#cb15-30" tabindex="-1"></a><span class="fu">str</span>(data)</span>
-<span id="cb15-31"><a href="#cb15-31" tabindex="-1"></a><span class="co">#&gt; &#39;data.frame&#39;:    2 obs. of  9 variables:</span></span>
-<span id="cb15-32"><a href="#cb15-32" tabindex="-1"></a><span class="co">#&gt;  $ assert_name     : chr  &quot;11 Zinfandel Lane - Home &amp; Vineyard&quot; &quot;25 Point Lobos - Commercial Property&quot;</span></span>
-<span id="cb15-33"><a href="#cb15-33" tabindex="-1"></a><span class="co">#&gt;  $ owner           : chr  &quot;JT&quot; &quot;SP&quot;</span></span>
-<span id="cb15-34"><a href="#cb15-34" tabindex="-1"></a><span class="co">#&gt;  $ location        : chr  &quot;St. Helena/Napa, CA, US&quot; &quot;San Francisco/San Francisco, CA, US&quot;</span></span>
-<span id="cb15-35"><a href="#cb15-35" tabindex="-1"></a><span class="co">#&gt;  $ asset_value_low : int  5000001 5000001</span></span>
-<span id="cb15-36"><a href="#cb15-36" tabindex="-1"></a><span class="co">#&gt;  $ asset_value_high: int  25000000 25000000</span></span>
-<span id="cb15-37"><a href="#cb15-37" tabindex="-1"></a><span class="co">#&gt;  $ income_type     : chr  &quot;Grape Sales&quot; &quot;Rent&quot;</span></span>
-<span id="cb15-38"><a href="#cb15-38" tabindex="-1"></a><span class="co">#&gt;  $ income_low      : int  100001 100001</span></span>
-<span id="cb15-39"><a href="#cb15-39" tabindex="-1"></a><span class="co">#&gt;  $ income_high     : int  1000000 1000000</span></span>
-<span id="cb15-40"><a href="#cb15-40" tabindex="-1"></a><span class="co">#&gt;  $ tx_gt_1000      : logi  FALSE FALSE</span></span></code></pre></div>
-<p>Note that I’ve used more of an explict prompt here. For this example,
-I found that this generated better results and that it’s a useful place
-to put additional instructions.</p>
-<p>If I let the LLM know that the fields are all optional, it’ll return
-<code>NULL</code> for the missing fields:</p>
-<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a>type_article <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
-<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a>  <span class="st">&quot;Information about an article written in markdown&quot;</span>,</span>
-<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a>  <span class="at">title =</span> <span class="fu">type_string</span>(<span class="st">&quot;Article title&quot;</span>, <span class="at">required =</span> <span class="cn">FALSE</span>),</span>
-<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a>  <span class="at">author =</span> <span class="fu">type_string</span>(<span class="st">&quot;Name of the author&quot;</span>, <span class="at">required =</span> <span class="cn">FALSE</span>),</span>
-<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a>  <span class="at">date =</span> <span class="fu">type_string</span>(<span class="st">&quot;Date written in YYYY-MM-DD format.&quot;</span>, <span class="at">required =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb16-6"><a href="#cb16-6" tabindex="-1"></a>)</span>
-<span id="cb16-7"><a href="#cb16-7" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat_structured</span>(prompt, <span class="at">type =</span> type_article)</span>
-<span id="cb16-8"><a href="#cb16-8" tabindex="-1"></a><span class="co">#&gt; $title</span></span>
-<span id="cb16-9"><a href="#cb16-9" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Structured Data&quot;</span></span>
-<span id="cb16-10"><a href="#cb16-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb16-11"><a href="#cb16-11" tabindex="-1"></a><span class="co">#&gt; $author</span></span>
-<span id="cb16-12"><a href="#cb16-12" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Hadley Wickham&quot;</span></span>
-<span id="cb16-13"><a href="#cb16-13" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb16-14"><a href="#cb16-14" tabindex="-1"></a><span class="co">#&gt; $date</span></span>
-<span id="cb16-15"><a href="#cb16-15" tabindex="-1"></a><span class="co">#&gt; NULL</span></span></code></pre></div>
-</div>
-<div id="data-frames" class="section level3">
-<h3>Data frames</h3>
-<p>If you want to define a data frame like object, you might be tempted
-to create a definition similar to what R uses: an object (i.e., a named
-list) containing multiple vectors (i.e., an array):</p>
-<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a>type_my_df <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
-<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a>  <span class="at">name =</span> <span class="fu">type_array</span>(<span class="at">items =</span> <span class="fu">type_string</span>()),</span>
-<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>  <span class="at">age =</span> <span class="fu">type_array</span>(<span class="at">items =</span> <span class="fu">type_integer</span>()),</span>
-<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>  <span class="at">height =</span> <span class="fu">type_array</span>(<span class="at">items =</span> <span class="fu">type_number</span>()),</span>
-<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a>  <span class="at">weight =</span> <span class="fu">type_array</span>(<span class="at">items =</span> <span class="fu">type_number</span>())</span>
-<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a>)</span></code></pre></div>
-<p>This, however, is not quite right becuase there’s no way to specify
-that each array should have the same length. Instead, you’ll need to
-turn the data structure “inside out” and create an array of objects:</p>
-<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a>type_my_df <span class="ot">&lt;-</span> <span class="fu">type_array</span>(</span>
-<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a>  <span class="at">items =</span> <span class="fu">type_object</span>(</span>
-<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a>    <span class="at">name =</span> <span class="fu">type_string</span>(),</span>
-<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a>    <span class="at">age =</span> <span class="fu">type_integer</span>(),</span>
-<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a>    <span class="at">height =</span> <span class="fu">type_number</span>(),</span>
-<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a>    <span class="at">weight =</span> <span class="fu">type_number</span>()</span>
-<span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a>  )</span>
-<span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a>)</span></code></pre></div>
-<p>If you’re familiar with the terms row-oriented and column-oriented
-data frames, this is the same idea. Since most languages don’t possess
-vectorisation like R, row-oriented structures tend to be much more
-common in the wild.</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a>type_asset <span class="ot">&lt;-</span> <span class="fu">type_object</span>(</span>
+<span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a>  <span class="at">assert_name =</span> <span class="fu">type_string</span>(),</span>
+<span id="cb19-3"><a href="#cb19-3" tabindex="-1"></a>  <span class="at">owner =</span> <span class="fu">type_string</span>(),</span>
+<span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a>  <span class="at">location =</span> <span class="fu">type_string</span>(),</span>
+<span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a>  <span class="at">asset_value_low =</span> <span class="fu">type_integer</span>(),</span>
+<span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a>  <span class="at">asset_value_high =</span> <span class="fu">type_integer</span>(),</span>
+<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a>  <span class="at">income_type =</span> <span class="fu">type_string</span>(),</span>
+<span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a>  <span class="at">income_low =</span> <span class="fu">type_integer</span>(),</span>
+<span id="cb19-9"><a href="#cb19-9" tabindex="-1"></a>  <span class="at">income_high =</span> <span class="fu">type_integer</span>(),</span>
+<span id="cb19-10"><a href="#cb19-10" tabindex="-1"></a>  <span class="at">tx_gt_1000 =</span> <span class="fu">type_boolean</span>()</span>
+<span id="cb19-11"><a href="#cb19-11" tabindex="-1"></a>)</span>
+<span id="cb19-12"><a href="#cb19-12" tabindex="-1"></a>type_assets <span class="ot">&lt;-</span> <span class="fu">type_array</span>(type_asset)</span>
+<span id="cb19-13"><a href="#cb19-13" tabindex="-1"></a></span>
+<span id="cb19-14"><a href="#cb19-14" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
+<span id="cb19-15"><a href="#cb19-15" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
+<span id="cb19-16"><a href="#cb19-16" tabindex="-1"></a>image <span class="ot">&lt;-</span> <span class="fu">content_image_file</span>(<span class="st">&quot;congressional-assets.png&quot;</span>)</span>
+<span id="cb19-17"><a href="#cb19-17" tabindex="-1"></a>data <span class="ot">&lt;-</span> chat<span class="sc">$</span><span class="fu">chat_structured</span>(image, <span class="at">type =</span> type_assets)</span>
+<span id="cb19-18"><a href="#cb19-18" tabindex="-1"></a>data</span>
+<span id="cb19-19"><a href="#cb19-19" tabindex="-1"></a><span class="co">#&gt;                            assert_name owner</span></span>
+<span id="cb19-20"><a href="#cb19-20" tabindex="-1"></a><span class="co">#&gt; 1  11 Zinfandel Lane - Home &amp; Vineyard    JT</span></span>
+<span id="cb19-21"><a href="#cb19-21" tabindex="-1"></a><span class="co">#&gt; 2 25 Point Lobos - Commercial Property    SP</span></span>
+<span id="cb19-22"><a href="#cb19-22" tabindex="-1"></a><span class="co">#&gt;                              location asset_value_low asset_value_high</span></span>
+<span id="cb19-23"><a href="#cb19-23" tabindex="-1"></a><span class="co">#&gt; 1             St. Helena/Napa, CA, US         5000001         25000000</span></span>
+<span id="cb19-24"><a href="#cb19-24" tabindex="-1"></a><span class="co">#&gt; 2 San Francisco/San Francisco, CA, US         5000001         25000000</span></span>
+<span id="cb19-25"><a href="#cb19-25" tabindex="-1"></a><span class="co">#&gt;   income_type income_low income_high tx_gt_1000</span></span>
+<span id="cb19-26"><a href="#cb19-26" tabindex="-1"></a><span class="co">#&gt; 1 Grape Sales     100001     1000000      FALSE</span></span>
+<span id="cb19-27"><a href="#cb19-27" tabindex="-1"></a><span class="co">#&gt; 2        Rent     100001     1000000      FALSE</span></span></code></pre></div>
 </div>
 </div>
 <div id="token-usage" class="section level2">
 <h2>Token usage</h2>
 <table>
+<colgroup>
+<col width="14%" />
+<col width="37%" />
+<col width="8%" />
+<col width="10%" />
+<col width="19%" />
+<col width="8%" />
+</colgroup>
 <thead>
 <tr class="header">
 <th align="left">provider</th>
 <th align="left">model</th>
 <th align="right">input</th>
 <th align="right">output</th>
+<th align="right">cached_input</th>
 <th align="right">price</th>
 </tr>
 </thead>
@@ -784,23 +809,26 @@ common in the wild.</p>
 <tr class="odd">
 <td align="left">OpenAI</td>
 <td align="left">gpt-4.1</td>
-<td align="right">9325</td>
-<td align="right">1899</td>
+<td align="right">7974</td>
+<td align="right">1860</td>
+<td align="right">0</td>
 <td align="right">$0.03</td>
 </tr>
 <tr class="even">
 <td align="left">OpenAI</td>
 <td align="left">gpt-4.1-nano</td>
-<td align="right">501</td>
-<td align="right">108</td>
+<td align="right">493</td>
+<td align="right">100</td>
+<td align="right">0</td>
 <td align="right">$0.00</td>
 </tr>
 <tr class="odd">
 <td align="left">Anthropic</td>
-<td align="left">claude-sonnet-4</td>
-<td align="right">1283</td>
-<td align="right">2043</td>
-<td align="right">$0.03</td>
+<td align="left">claude-sonnet-4-20250514</td>
+<td align="right">1259</td>
+<td align="right">2216</td>
+<td align="right">0</td>
+<td align="right">$0.04</td>
 </tr>
 </tbody>
 </table>

@@ -56,7 +56,8 @@ chat_azure_openai <- function(
   token = deprecated(),
   credentials = NULL,
   api_args = list(),
-  echo = c("none", "output", "all")
+  echo = c("none", "output", "all"),
+  api_headers = character()
 ) {
   check_exclusive(token, credentials, .require = FALSE)
   if (lifecycle::is_present(token)) {
@@ -95,13 +96,19 @@ chat_azure_openai <- function(
     api_version = api_version,
     api_key = api_key,
     credentials = credentials,
-    extra_args = api_args
+    extra_args = api_args,
+    extra_headers = api_headers
   )
   Chat$new(provider = provider, system_prompt = system_prompt, echo = echo)
 }
 
 
-chat_azure_openai_test <- function(system_prompt = NULL, params = NULL, ...) {
+chat_azure_openai_test <- function(
+  system_prompt = NULL,
+  params = NULL,
+  ...,
+  echo = "none"
+) {
   api_key <- key_get("AZURE_OPENAI_API_KEY")
   default_params <- params(seed = 1014, temperature = 0)
   params <- modify_list(default_params, params %||% params())
@@ -112,7 +119,8 @@ chat_azure_openai_test <- function(system_prompt = NULL, params = NULL, ...) {
     api_key = api_key,
     endpoint = "https://ai-hwickhamai260967855527.openai.azure.com",
     deployment_id = "gpt-4o-mini",
-    params = params
+    params = params,
+    echo = echo
   )
 }
 

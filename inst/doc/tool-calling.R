@@ -1,24 +1,17 @@
-## ----include = FALSE----------------------------------------------------------
+## -----------------------------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = ellmer:::openai_key_exists()
+  eval = ellmer:::eval_vignette()
 )
+vcr::setup_knitr()
 
 ## ----setup--------------------------------------------------------------------
 library(ellmer)
 
-## ----eval=FALSE---------------------------------------------------------------
-# chat <- chat_openai(model = "gpt-4o")
-# chat$chat("How long ago exactly was the moment Neil Armstrong touched down on the moon?")
-# #> Neil Armstrong touched down on the moon on July 20, 1969, at 20:17 UTC. To determine how long ago that
-# #> was from the current year of 2023, we can calculate the difference in years, months, and days.
-# #>
-# #> From July 20, 1969, to July 20, 2023, is exactly 54 years. If today's date is after July 20, 2023, you
-# #> would add the additional time since then. If it is before, you would consider slightly less than 54
-# #> years.
-# #>
-# #> As of right now, can you confirm the current date so we can calculate the precise duration?
+## -----------------------------------------------------------------------------
+chat <- chat_openai(model = "gpt-4o")
+chat$chat("How long ago did Neil Armstrong touch down on the moon?")
 
 ## -----------------------------------------------------------------------------
 #' Gets the current time in the given time zone.
@@ -29,72 +22,70 @@ get_current_time <- function(tz = "UTC") {
   format(Sys.time(), tz = tz, usetz = TRUE)
 }
 
-## ----eval=FALSE---------------------------------------------------------------
-# get_current_time()
-# #> [1] "2024-09-18 17:47:14 UTC"
-
 ## -----------------------------------------------------------------------------
-chat <- chat_openai(model = "gpt-4o")
-
-chat$register_tool(tool(
-  get_current_time,
-  "Gets the current time in the given time zone.",
-  tz = type_string(
-    "The time zone to get the current time in. Defaults to `\"UTC\"`.",
-    required = FALSE
-  )
-))
-
-## ----eval=FALSE---------------------------------------------------------------
-# chat$chat("How long ago exactly was the moment Neil Armstrong touched down on the moon?")
-# #> Neil Armstrong touched down on the moon on July 20, 1969, at 20:17 UTC.
-# #>
-# #> To calculate the time elapsed from that moment until the current time (September 18, 2024, 17:47:19
-# #> UTC), we need to break it down.
-# #>
-# #> 1. From July 20, 1969, 20:17 UTC to July 20, 2024, 20:17 UTC is exactly 55 years.
-# #> 2. From July 20, 2024, 20:17 UTC to September 18, 2024, 17:47:19 UTC, we need to further break down:
-# #>
-# #>    - From July 20, 2024, 20:17 UTC to September 18, 2024, 17:47:19 UTC, which is:
-# #>      - 1 full month (August)
-# #>      - 30 – 20 = 10 days of July
-# #>      - 18 days of September until 17:47:19 UTC
-# #>
-# #> So, in detail:
-# #>    - 55 years
-# #>    - 1 month
-# #>    - 28 days
-# #>    - From July 20, 2024, 20:17 UTC to July 20, 2024, 17:47:19 UTC: 23 hours, 30 minutes, and 19 seconds
-# #>
-# #> Time Total:
-# #> - 55 years
-# #> - 1 month
-# #> - 28 days
-# #> - 23 hours
-# #> - 30 minutes
-# #> - 19 seconds
-# #>
-# #> This is the exact time that has elapsed since Neil Armstrong's historic touchdown on the moon.
-
-## -----------------------------------------------------------------------------
-raining <- c(London = "heavy", Houston = "none", Chicago = "overcast")
-temperature <- c(London = "cool", Houston = "hot", Chicago = "warm")
-wind <- c(London = "strong", Houston = "weak", Chicago = "strong")
-
-get_weather <- function(cities) {
-  data.frame(
-    city = cities,
-    raining = unname(raining[cities]),
-    temperature = unname(temperature[cities]),
-    wind = unname(wind[cities])
+# Fake it for the vignette so we always get the same results
+get_current_time <- function(tz = "UTC") {
+  format(
+    as.POSIXct("2025-06-25 11:53:23", tz = "America/Chicago"),
+    tz = tz,
+    usetz = TRUE
   )
 }
+
+## -----------------------------------------------------------------------------
+get_current_time <- tool(
+  get_current_time,
+  name = "get_current_time",
+  description = "Returns the current time.",
+  arguments = list(
+    tz = type_string(
+      "Time zone to display the current time in. Defaults to `\"UTC\"`.",
+      required = FALSE
+    )
+  )
+)
+
+## -----------------------------------------------------------------------------
+get_current_time()
+
+## -----------------------------------------------------------------------------
+chat$register_tool(get_current_time)
+
+## -----------------------------------------------------------------------------
+chat$chat("How long ago did Neil Armstrong touch down on the moon?")
+
+## -----------------------------------------------------------------------------
+chat
+
+## -----------------------------------------------------------------------------
+get_weather <- tool(
+  function(cities) {
+    raining <- c(London = "heavy", Houston = "none", Chicago = "overcast")
+    temperature <- c(London = "cool", Houston = "hot", Chicago = "warm")
+    wind <- c(London = "strong", Houston = "weak", Chicago = "strong")
+
+    data.frame(
+      city = cities,
+      raining = unname(raining[cities]),
+      temperature = unname(temperature[cities]),
+      wind = unname(wind[cities])
+    )
+  },
+  name = "get_weather",
+  description = "
+    Report on weather conditions in multiple cities. For efficiency, request 
+    all weather updates using a single tool call
+  ",
+  arguments = list(
+    cities = type_array(type_string(), "City names")
+  )
+)
+
+## -----------------------------------------------------------------------------
 chat <- chat_openai()
-chat$register_tool(tool( 
-  get_weather,
-  "Report on weather conditions in multiple cities. For efficiency, request all 
-  weather updates using a single tool call",
-  cities = type_array("City names", type_string())
-))
+chat$register_tool(get_weather)
 chat$chat("Give me a weather udpate for London and Chicago")
+
+## -----------------------------------------------------------------------------
+chat
 

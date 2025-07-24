@@ -14,23 +14,26 @@
 #'   the `chat()`, `stream()`, `chat_async()`, or `stream_async()` methods.
 #'
 #' @export
-#' @examplesIf has_credentials("openai")
-#' chat <- chat_openai(echo = TRUE)
+#' @examples
+#' \dontshow{ellmer:::vcr_example_start("content_image_url")}
+#' chat <- chat_openai()
 #' chat$chat(
 #'   "What do you see in these images?",
 #'   content_image_url("https://www.r-project.org/Rlogo.png"),
 #'   content_image_file(system.file("httr2.png", package = "ellmer"))
 #' )
 #'
-#' \dontshow{dev.control('enable')}
+#' \dontrun{
 #' plot(waiting ~ eruptions, data = faithful)
-#' chat <- chat_openai(echo = TRUE)
+#' chat <- chat_openai()
 #' chat$chat(
 #'   "Describe this plot in one paragraph, as suitable for inclusion in
 #'    alt-text. You should briefly describe the plot type, the axes, and
 #'    2-5 major visual patterns.",
 #'    content_image_plot()
 #' )
+#' }
+#' \dontshow{ellmer:::vcr_example_end()}
 content_image_url <- function(url, detail = c("auto", "low", "high")) {
   detail <- arg_match(detail)
 
@@ -61,8 +64,6 @@ content_image_url <- function(url, detail = c("auto", "low", "high")) {
 #'   All values other than `none` require the `magick` package.
 #' @export
 content_image_file <- function(path, content_type = "auto", resize = "low") {
-  check_installed("base64enc", "to encode images")
-
   # TODO: Allow vector input?
   check_string(path, allow_empty = FALSE)
   check_string(content_type, allow_empty = FALSE)
@@ -89,11 +90,11 @@ content_image_file <- function(path, content_type = "auto", resize = "low") {
 
   # Implement resizing logic
   if (resize == "none") {
-    base64 <- base64enc::base64encode(path)
+    base64 <- base64_enc(path = path)
   } else {
     check_installed("magick", "to resize images")
 
-    img <- magick::image_read(path)
+    img <- magick::image_read(path, strip = TRUE)
 
     if (resize == "low") {
       img <- magick::image_resize(img, "512x512>")
@@ -112,7 +113,7 @@ content_image_file <- function(path, content_type = "auto", resize = "low") {
       img <- magick::image_resize(img, resize)
     }
     buf <- magick::image_write(img, format = magick::image_info(img)$format)
-    base64 <- base64enc::base64encode(buf)
+    base64 <- base64_enc(raw = buf)
   }
 
   ContentImageInline(content_type, base64)

@@ -48,8 +48,9 @@ overflow: visible;
 }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -60,7 +61,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -403,7 +404,7 @@ English.</p>
 <p>LLMs are priced per million tokens. State of the art models (like
 GPT-4.1 or Claude 3.5 sonnet) cost $2-3 per million input tokens, and
 $10-15 per million output tokens. Cheaper models can cost much less,
-e.g. GPT-4.1 nanoo costs $0.10 per million input tokens and $0.40 per
+e.g. GPT-4.1 nano costs $0.10 per million input tokens and $0.40 per
 million output tokens. Even $10 of API credit will give you a lot of
 room for experimentation, particularly with cheaper models, and prices
 are likely to decline as model performance improves.</p>
@@ -418,15 +419,15 @@ printing it, and you can see total usage for a session with
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>(<span class="at">model =</span> <span class="st">&quot;gpt-4.1&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>. <span class="ot">&lt;-</span> chat<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;Who created R?&quot;</span>, <span class="at">echo =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>chat</span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-4.1 turns=2 tokens=11/92 $0.00&gt;</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-4.1 turns=2 tokens=11/77 $0.00&gt;</span></span>
 <span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co">#&gt; ── user [11] ───────────────────────────────────────────────────────────────────</span></span>
 <span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt; Who created R?</span></span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt; ── assistant [92] ──────────────────────────────────────────────────────────────</span></span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; **R** is a programming language and software environment for statistical computing and graphics. It was **created by Ross Ihaka and Robert Gentleman** at the University of Auckland, New Zealand, in the early 1990s. The project started in 1992, and the first public release was made in 1995. Since then, R has grown into a large, collaborative open-source project supported by the R Development Core Team and a vibrant global community.</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt; ── assistant [77] ──────────────────────────────────────────────────────────────</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; R was originally created by **Ross Ihaka** and **Robert Gentleman** at the University of Auckland, New Zealand, in the early 1990s. They began developing R as a free, open-source implementation of the S programming language for statistical computing and graphics. The project quickly grew, and today it is maintained by the R Core Team and the contributions of many users worldwide.</span></span>
 <span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a></span>
 <span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="fu">token_usage</span>()</span>
-<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt;   provider   model input output price</span></span>
-<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="co">#&gt; 1   OpenAI gpt-4.1    11     92 $0.00</span></span></code></pre></div>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt;   provider   model input output cached_input price</span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="co">#&gt; 1   OpenAI gpt-4.1    11     77            0 $0.00</span></span></code></pre></div>
 <p>If you want to learn more about tokens and tokenizers, I’d recommend
 watching the first 20-30 minutes of <a href="https://www.youtube.com/watch?v=zduSFxRajkE">Let’s build the GPT
 Tokenizer</a> by Andrej Karpathy. You certainly don’t need to learn how
@@ -449,7 +450,7 @@ means that:</p>
 turns: if you want to save money, keep your conversations
 short.</p></li>
 <li><p>Each response is affected by all previous prompts and responses.
-This can make a converstion get stuck in a local optimum, so it’s
+This can make a conversation get stuck in a local optimum, so it’s
 generally better to iterate by starting a new conversation with a better
 prompt rather than having a long back-and-forth.</p></li>
 <li><p>ellmer has full control over the conversational history. Because
@@ -478,10 +479,10 @@ database schema, or your preferred ggplot2 theme and color
 palette.</p></li>
 </ul>
 <p>OpenAI calls this the <a href="https://cdn.openai.com/spec/model-spec-2024-05-08.html#follow-the-chain-of-command">chain
-of command</a>: if there are conflicts or inconsistencies the prompts,
-the platform prompt overrides the system prompt, which in turn overrides
-the user prompt.</p>
-<p>When you use a chat app like ChatGPT or claude.ai you can only
+of command</a>: if there are conflicts or inconsistencies in the
+prompts, the platform prompt overrides the system prompt, which in turn
+overrides the user prompt.</p>
+<p>When you use a chat app like ChatGPT or Claude.ai you can only
 iterate on the user prompt. But when you’re programming with LLMs,
 you’ll primarily iterate on the system prompt. For example, if you’re
 developing an app that helps a user write tidyverse code, you’d work
@@ -520,12 +521,12 @@ prompt because LLMs were trained on data prior to your package’s
 existence. You can create a surprisingly useful tool just by preloading
 the prompt with your README and vignettes. This is how the <a href="https://github.com/jcheng5/ellmer-assistant">ellmer assistant</a>
 works.</p></li>
-<li><p>Build language specific prompts for R and/or python. <a href="https://shiny.posit.co/blog/posts/shiny-assistant/">Shiny
-assistant</a> helps you build shiny apps (either in R or python) by
+<li><p>Build language specific prompts for R and/or Python. <a href="https://shiny.posit.co/blog/posts/shiny-assistant/">Shiny
+Assistant</a> helps you build shiny apps (either in R or Python) by
 combining a <a href="https://github.com/posit-dev/shiny-assistant/blob/main/shinyapp/app_prompt.md">prompt</a>
 that gives general advice on building apps with a prompt for <a href="https://github.com/posit-dev/shiny-assistant/blob/main/shinyapp/app_prompt_r.md">R</a>
 or <a href="https://github.com/posit-dev/shiny-assistant/blob/main/shinyapp/app_prompt_python.md">python</a>.
-The python prompt is very detailed because there’s much less information
+The Python prompt is very detailed because there’s much less information
 about Shiny for Python in the existing LLM knowledgebases.</p></li>
 <li><p>Help people find the answers to their questions. Even if you’ve
 written a bunch of documentation for something, you might find that you

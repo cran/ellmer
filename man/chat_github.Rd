@@ -2,6 +2,7 @@
 % Please edit documentation in R/provider-github.R
 \name{chat_github}
 \alias{chat_github}
+\alias{models_github}
 \title{Chat with a model hosted on the GitHub model marketplace}
 \usage{
 chat_github(
@@ -11,7 +12,13 @@ chat_github(
   model = NULL,
   seed = NULL,
   api_args = list(),
-  echo = NULL
+  echo = NULL,
+  api_headers = character()
+)
+
+models_github(
+  base_url = "https://models.inference.ai.azure.com/",
+  api_key = github_key()
 )
 }
 \arguments{
@@ -44,6 +51,9 @@ when running at the console).
 }
 
 Note this only affects the \code{chat()} method.}
+
+\item{api_headers}{Named character vector of arbitrary extra headers appended
+to every chat API call.}
 }
 \value{
 A \link{Chat} object.
@@ -69,7 +79,6 @@ Other chatbots:
 \code{\link{chat_aws_bedrock}()},
 \code{\link{chat_azure_openai}()},
 \code{\link{chat_cloudflare}()},
-\code{\link{chat_cortex_analyst}()},
 \code{\link{chat_databricks}()},
 \code{\link{chat_deepseek}()},
 \code{\link{chat_google_gemini}()},
