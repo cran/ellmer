@@ -73,6 +73,32 @@ test_that("can re-match tools if present", {
   expect_equal(replayed@contents[[1]]@tool, NULL)
 })
 
+test_that("can re-match tools if present", {
+  mytool <- tool(function() {}, "mytool")
+
+  request <- ContentToolRequest("123", "mytool", tool = mytool)
+  result <- ContentToolResult("value", request = request)
+
+  turn_request <- Turn("user", list(request))
+  turn_result <- Turn("user", list(result))
+
+  test_record_replay(turn_request, tools = list(mytool = mytool))
+  test_record_replay(turn_result, tools = list(mytool = mytool))
+
+  # If no tool match, it still works, but tool is left as NULL
+  replayed_turn_request <- contents_replay(
+    contents_record(turn_request),
+    tools = list()
+  )
+  expect_null(replayed_turn_request@contents[[1]]@tool)
+
+  replayed_turn_result <- contents_replay(
+    contents_record(turn_result),
+    tools = list()
+  )
+  expect_null(replayed_turn_result@contents[[1]]@request@tool)
+})
+
 test_that("checks recorded value types", {
   bad_names <- list()
   bad_version <- list(version = 2, class = "ellmer::Content", props = list())
@@ -92,6 +118,60 @@ test_that("non-ellmer classes are not recorded/replayed by default", {
     contents_record(LocalClass())
     contents_replay(recorded)
   })
+})
+
+test_that("packaged classes that extend ellmer classes can be replayed", {
+  env <- rlang::current_env()
+
+  local_mocked_bindings(
+    ns_env = function(x) {
+      if (x == "foo") {
+        return(env)
+      }
+      rlang::ns_env(x)
+    }
+  )
+
+  LocalContentText <- S7::new_class(
+    "LocalContentText",
+    package = "foo",
+    parent = ellmer::ContentText
+  )
+
+  test_record_replay(LocalContentText("hello world"))
+  test_record_replay(
+    Turn("user", list(LocalContentText(text = "hello world")))
+  )
+})
+
+test_that("local classes that extend ellmer classes can be replayed", {
+  LocalContentText <- S7::new_class(
+    "LocalContentText",
+    package = NULL,
+    parent = ellmer::ContentText
+  )
+
+  test_record_replay(LocalContentText("hello world"))
+  test_record_replay(
+    Turn("user", list(LocalContentText(text = "hello world")))
+  )
+})
+
+test_that("local classes that extend ellmer classes can be replayed", {
+  test_content <- S7::new_class(
+    "LocalContentText",
+    package = NULL,
+    parent = ellmer::ContentText
+  )
+
+  LocalContentText <- function(...) {
+    test_content(...)
+  }
+
+  expect_snapshot(
+    error = TRUE,
+    test_record_replay(test_content("hello world"))
+  )
 })
 
 test_that("replayed objects must be existing S7 classes", {
