@@ -1,6 +1,6 @@
 Package: ellmer
 Title: Chat with Large Language Models
-Version: 0.3.1
+Version: 0.3.2
 Authors@R: c(
     person("Hadley", "Wickham", , "hadley@posit.co", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-4757-117X")),
@@ -54,7 +54,7 @@ Collate: 'utils-S7.R' 'types.R' 'ellmer-package.R' 'tools-def.R'
         'utils-callbacks.R' 'utils-cat.R' 'utils-merge.R'
         'utils-prettytime.R' 'utils.R' 'zzz.R'
 NeedsCompilation: no
-Packaged: 2025-08-24 20:14:33 UTC; hadleywickham
+Packaged: 2025-09-03 21:23:12 UTC; hadleywickham
 Author: Hadley Wickham [aut, cre] (ORCID:
     <https://orcid.org/0000-0003-4757-117X>),
   Joe Cheng [aut],
@@ -65,4 +65,4 @@ Author: Hadley Wickham [aut, cre] (ORCID:
   Posit Software, PBC [cph, fnd] (ROR: <https://ror.org/03wc8by49>)
 Maintainer: Hadley Wickham <hadley@posit.co>
 Repository: CRAN
-Date/Publication: 2025-08-24 20:40:02 UTC
+Date/Publication: 2025-09-03 22:00:09 UTC

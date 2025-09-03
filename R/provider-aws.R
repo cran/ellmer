@@ -27,6 +27,7 @@ NULL
 #'   If you're using [cross-region inference](https://aws.amazon.com/blogs/machine-learning/getting-started-with-cross-region-inference-in-amazon-bedrock/),
 #'   you'll need to use the inference profile ID, e.g.
 #'   `model="us.anthropic.claude-3-5-sonnet-20240620-v1:0"`.
+#' @param params Common model parameters, usually created by [params()].
 #' @param api_args Named list of arbitrary extra arguments appended to the body
 #'   of every chat API call. Some useful arguments include:
 #'
@@ -55,6 +56,7 @@ chat_aws_bedrock <- function(
   base_url = NULL,
   model = NULL,
   profile = NULL,
+  params = NULL,
   api_args = list(),
   api_headers = character(),
   echo = NULL
@@ -65,10 +67,13 @@ chat_aws_bedrock <- function(
     \(x) sprintf("https://bedrock-runtime.%s.amazonaws.com", x)
   echo <- check_echo(echo)
 
+  params <- params %||% params()
+
   provider <- provider_aws_bedrock(
     base_url = base_url,
     model = model,
     profile = profile,
+    params = params,
     extra_args = api_args,
     extra_headers = api_headers
   )
@@ -107,6 +112,7 @@ provider_aws_bedrock <- function(
   base_url,
   model = "",
   profile = NULL,
+  params = list(),
   extra_args = list(),
   extra_headers = character()
 ) {
@@ -126,6 +132,7 @@ provider_aws_bedrock <- function(
     profile = profile,
     region = credentials$region,
     cache = cache,
+    params = params,
     extra_args = extra_args,
     extra_headers = extra_headers
   )
@@ -162,6 +169,19 @@ method(base_request_error, ProviderAWSBedrock) <- function(provider, req) {
     body <- resp_body_json(resp)
     body$Message %||% body$message
   })
+}
+
+method(chat_params, ProviderAWSBedrock) <- function(provider, params) {
+  # https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_InferenceConfiguration.html
+  standardise_params(
+    params,
+    c(
+      temperature = "temperature",
+      topP = "top_p",
+      maxTokens = "max_tokens",
+      stopSequences = "stop_sequences"
+    )
+  )
 }
 
 method(chat_request, ProviderAWSBedrock) <- function(
@@ -208,13 +228,20 @@ method(chat_request, ProviderAWSBedrock) <- function(
     toolConfig <- NULL
   }
 
+  # Merge params into inferenceConfig, giving precedence to manual api_args
+  params <- chat_params(provider, provider@params)
+
+  extra_args <- provider@extra_args
+  extra_args$inferenceConfig <- modify_list(params, extra_args$inferenceConfig)
+
   # https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_Converse.html
-  body <- list(
+  body <- compact(list2(
     messages = messages,
     system = system,
-    toolConfig = toolConfig
-  )
-  body <- modify_list(body, provider@extra_args)
+    toolConfig = toolConfig,
+    !!!extra_args
+  ))
+
   req <- req_body_json(req, body)
   req <- req_headers(req, !!!provider@extra_headers)
 

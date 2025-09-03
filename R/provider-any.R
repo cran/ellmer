@@ -34,6 +34,13 @@ chat <- function(
     cli::cli_abort("Can't find provider {.code ellmer::{provider_fn_name}()}.")
   }
 
+  required_params <- c("model", "system_prompt", "params")
+  if (any(!required_params %in% fn_fmls_names(chat_fun))) {
+    cli::cli_abort(
+      "{.fn ellmer::chat} does not support {.fn ellmer::{provider_fn_name}}, please call it directly.",
+    )
+  }
+
   chat_fun(
     model = model,
     ...,
