@@ -1,82 +1,130 @@
 http_interactions:
 - request:
     method: POST
-    uri: https://api.openai.com/v1/chat/completions
+    uri: https://api.openai.com/v1/responses
     body:
-      string: '{"messages":[{"role":"user","content":[{"type":"text","text":"My name
-        is Susan and I''m 13 years old"}]},{"role":"assistant","content":[{"type":"text","text":"<structured
-        data/>"}]},{"role":"user","content":[{"type":"image_url","image_url":{"url":"https://www.r-project.org/Rlogo.png"}}]}],"model":"gpt-4.1","stream":false,"response_format":{"type":"json_schema","json_schema":{"name":"structured_data","schema":{"type":"object","description":"","properties":{"primary_shape":{"type":"string","description":""},"primary_colour":{"type":"string","description":""}},"required":["primary_shape","primary_colour"],"additionalProperties":false},"strict":true}}}'
+      string: '{"input":[{"role":"user","content":[{"type":"input_image","image_url":"https://www.r-project.org/Rlogo.png"}]}],"model":"gpt-4.1","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"primary_shape":{"type":"string","description":""},"primary_colour":{"type":"string","description":""}},"required":["primary_shape","primary_colour"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
   response:
     status: 200
     headers:
-      access-control-expose-headers: X-Request-ID
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: 96125ab98816511a-MSP
+      cf-ray: 999eecfc59753458-DFW
       content-encoding: gzip
       content-type: application/json
-      date: Fri, 18 Jul 2025 13:34:06 GMT
-      openai-organization: user-wfrajlxs4zxa4ixjljhmt9vx
-      openai-processing-ms: '2099'
+      date: Wed, 05 Nov 2025 19:58:28 GMT
+      openai-organization: posit-esfrkf
+      openai-processing-ms: '3530'
       openai-project: proj_IeWhBnzvOO8wbVR5MdxnGXFq
       openai-version: '2020-10-01'
       server: cloudflare
       set-cookie:
-      - __cf_bm=y0d2ArCk5BcMzTmNXu9_ZHUZcJyVc6OCs29mqREjZBw-1752845646-1.0.1.1-GobSvwOoBR.GY2RykH3yFbw_rmx_l9yM7zyGTwVuJD_SDLG6sCEZlaUaMP6l8SvFfwf6jmdxtamyB3.lGB4aWFYtf6AbtzDMNceYPRbiWDo;
-        path=/; expires=Fri, 18-Jul-25 14:04:06 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=97MpscjOD8TM3GGk7Qp7cPVGouEWUrGYcp8MB3m1kcw-1762372708-1.0.1.1-iUXowzZDiiYGDIfDWp.bvn84STHtRePWCUzqMtGGRijdB3pGB0MP_m3uVf8qIWMsrF0b.F4lc_cde6wFwIrS9L9PM30eLvONECNNdPIr5jQ;
+        path=/; expires=Wed, 05-Nov-25 20:28:28 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=agGVgUdC_x5WSNGTXdC.5JIyveSqlKNuIlFPx7r3BkQ-1752845646044-0.0.1.1-604800000;
+      - _cfuvid=DOPlQJkjIKXdmkwR5WqlNPdY9PJFICsLs7oZZsgTnDc-1762372708281-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-envoy-upstream-service-time: '955'
-      x-ratelimit-limit-input-images: '250000'
+      x-envoy-upstream-service-time: '3536'
       x-ratelimit-limit-requests: '10000'
       x-ratelimit-limit-tokens: '30000000'
-      x-ratelimit-remaining-input-images: '249999'
       x-ratelimit-remaining-requests: '9999'
-      x-ratelimit-remaining-tokens: '29999217'
-      x-ratelimit-reset-input-images: 0s
+      x-ratelimit-remaining-tokens: '29999235'
       x-ratelimit-reset-requests: 6ms
       x-ratelimit-reset-tokens: 1ms
-      x-request-id: req_54a84a310cc38408fa0c72c0a0a19aa6
+      x-request-id: req_2ca10c2d31f0428dbc52eb1619d6b421
     body:
-      string: |
+      string: |-
         {
-          "id": "chatcmpl-BufVtq2XOTAWUXZJD0eGHJadA6kiM",
-          "object": "chat.completion",
-          "created": 1752845645,
+          "id": "resp_06f290f0c74fcb0f01690bac60c3d88197ab141eb8ce6f1389",
+          "object": "response",
+          "created_at": 1762372706,
+          "status": "completed",
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
           "model": "gpt-4.1-2025-04-14",
-          "choices": [
+          "output": [
             {
-              "index": 0,
-              "message": {
-                "role": "assistant",
-                "content": "{\"primary_shape\":\"letter and oval\",\"primary_colour\":\"blue and gray\"}",
-                "refusal": null,
-                "annotations": []
-              },
-              "logprobs": null,
-              "finish_reason": "stop"
+              "id": "msg_06f290f0c74fcb0f01690bac63e4fc819796c10d109d72d212",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\"primary_shape\":\"ellipse and letter\",\"primary_colour\":\"grey and blue\"}"
+                }
+              ],
+              "role": "assistant"
             }
           ],
-          "usage": {
-            "prompt_tokens": 332,
-            "completion_tokens": 15,
-            "total_tokens": 347,
-            "prompt_tokens_details": {
-              "cached_tokens": 0,
-              "audio_tokens": 0
-            },
-            "completion_tokens_details": {
-              "reasoning_tokens": 0,
-              "audio_tokens": 0,
-              "accepted_prediction_tokens": 0,
-              "rejected_prediction_tokens": 0
-            }
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
           },
+          "safety_identifier": null,
           "service_tier": "default",
-          "system_fingerprint": null
+          "store": false,
+          "temperature": 1.0,
+          "text": {
+            "format": {
+              "type": "json_schema",
+              "description": null,
+              "name": "structured_data",
+              "schema": {
+                "type": "object",
+                "description": "",
+                "properties": {
+                  "primary_shape": {
+                    "type": "string",
+                    "description": ""
+                  },
+                  "primary_colour": {
+                    "type": "string",
+                    "description": ""
+                  }
+                },
+                "required": [
+                  "primary_shape",
+                  "primary_colour"
+                ],
+                "additionalProperties": false
+              },
+              "strict": true
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tools": [],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 303,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 16,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 319
+          },
+          "user": null,
+          "metadata": {}
         }
-  recorded_at: 2025-07-18 13:34:05
-recorded_with: VCR-vcr/1.7.1.93
+  recorded_at: 2025-11-05 19:58:28
+recorded_with: VCR-vcr/2.0.0

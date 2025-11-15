@@ -1,4 +1,4 @@
-#' @include provider-openai.R
+#' @include provider-openai-compatible.R
 NULL
 
 #' Chat with a model hosted on Groq
@@ -6,8 +6,7 @@ NULL
 #' @description
 #' Sign up at <https://groq.com>.
 #'
-#' This function is a lightweight wrapper around [chat_openai()] with
-#' the defaults tweaked for groq.
+#' Built on top of [chat_openai_compatible()].
 #'
 #' ## Known limitations
 #'
@@ -15,8 +14,9 @@ NULL
 #'
 #' @export
 #' @family chatbots
-#' @param api_key `r api_key_param("GROQ_API_KEY")`
-#' @param model `r param_model("llama3-8b-8192")`
+#' @param api_key `r lifecycle::badge("deprecated")` Use `credentials` instead.
+#' @param credentials `r api_key_param("GROQ_API_KEY")`
+#' @param model `r param_model("llama-3.1-8b-instant")`
 #' @param params Common model parameters, usually created by [params()].
 #' @inheritParams chat_openai
 #' @inherit chat_openai return
@@ -28,16 +28,23 @@ NULL
 chat_groq <- function(
   system_prompt = NULL,
   base_url = "https://api.groq.com/openai/v1",
-  api_key = groq_key(),
+  api_key = NULL,
+  credentials = NULL,
   model = NULL,
   params = NULL,
-  seed = NULL,
   api_args = list(),
   echo = NULL,
   api_headers = character()
 ) {
-  model <- set_default(model, "llama3-8b-8192")
+  model <- set_default(model, "llama-3.1-8b-instant")
   echo <- check_echo(echo)
+
+  credentials <- as_credentials(
+    "chat_groq",
+    function() groq_key(),
+    credentials = credentials,
+    api_key = api_key
+  )
 
   # https://console.groq.com/docs/api-reference#chat-create (same as OpenAI)
   params <- params %||% params()
@@ -47,21 +54,20 @@ chat_groq <- function(
     base_url = base_url,
     model = model,
     params = params,
-    seed = seed,
     extra_args = api_args,
-    api_key = api_key,
+    credentials = credentials,
     extra_headers = api_headers
   )
   Chat$new(provider = provider, system_prompt = system_prompt, echo = echo)
 }
 
-ProviderGroq <- new_class("ProviderGroq", parent = ProviderOpenAI)
+ProviderGroq <- new_class("ProviderGroq", parent = ProviderOpenAICompatible)
 
-method(as_json, list(ProviderGroq, Turn)) <- function(provider, x) {
-  if (x@role == "assistant") {
+method(as_json, list(ProviderGroq, Turn)) <- function(provider, x, ...) {
+  if (is_assistant_turn(x)) {
     # Tool requests come out of content and go into own argument
     is_tool <- map_lgl(x@contents, is_tool_request)
-    tool_calls <- as_json(provider, x@contents[is_tool])
+    tool_calls <- as_json(provider, x@contents[is_tool], ...)
 
     # Grok contents is just a string. Hopefully it never sends back more
     # than a single text response.
@@ -79,11 +85,11 @@ method(as_json, list(ProviderGroq, Turn)) <- function(provider, x) {
       ))
     )
   } else {
-    as_json(super(provider, ProviderOpenAI), x)
+    as_json(super(provider, ProviderOpenAICompatible), x, ...)
   }
 }
 
-method(as_json, list(ProviderGroq, TypeObject)) <- function(provider, x) {
+method(as_json, list(ProviderGroq, TypeObject)) <- function(provider, x, ...) {
   if (x@additional_properties) {
     cli::cli_abort("{.arg .additional_properties} not supported for Groq.")
   }
@@ -92,18 +98,18 @@ method(as_json, list(ProviderGroq, TypeObject)) <- function(provider, x) {
   compact(list(
     type = "object",
     description = x@description,
-    properties = as_json(provider, x@properties),
+    properties = as_json(provider, x@properties, ...),
     required = as.list(names2(x@properties)[required])
   ))
 }
 
-method(as_json, list(ProviderGroq, ToolDef)) <- function(provider, x) {
+method(as_json, list(ProviderGroq, ToolDef)) <- function(provider, x, ...) {
   list(
     type = "function",
     "function" = compact(list(
       name = x@name,
       description = x@description,
-      parameters = as_json(provider, x@arguments)
+      parameters = as_json(provider, x@arguments, ...)
     ))
   )
 }

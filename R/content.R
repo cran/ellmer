@@ -23,11 +23,11 @@ NULL
 #' support more providers and as providers add more content types.
 #' @examples
 #' turns <- list(
-#'   Turn("user", contents = list(
+#'   UserTurn(list(
 #'     ContentText("What's this image?"),
 #'     content_image_url("https://placehold.co/200x200")
 #'   )),
-#'   Turn("assistant", "It's a placeholder image.")
+#'   AssistantTurn("It's a placeholder image.")
 #' )
 #'
 #' lapply(turns, contents_text)
@@ -142,7 +142,7 @@ ContentImage <- new_class(
 #' @param detail Not currently used.
 ContentImageRemote <- new_class(
   "ContentImageRemote",
-  parent = Content,
+  parent = ContentImage,
   properties = list(
     url = prop_string(),
     detail = prop_string(default = "")
@@ -164,13 +164,14 @@ method(contents_markdown, ContentImageRemote) <- function(content) {
 #' @param data Base64 encoded image data.
 ContentImageInline <- new_class(
   "ContentImageInline",
-  parent = Content,
+  parent = ContentImage,
   properties = list(
     type = prop_string(),
     data = prop_string(allow_null = TRUE)
   )
 )
 method(format, ContentImageInline) <- function(x, ...) {
+  show_image(x)
   cli::format_inline("[{.strong inline image}]")
 }
 method(contents_html, ContentImageInline) <- function(content) {
@@ -178,6 +179,17 @@ method(contents_html, ContentImageInline) <- function(content) {
 }
 method(contents_markdown, ContentImageInline) <- function(content) {
   sprintf('![](data:%s;base64,%s)', content@type, content@data)
+}
+
+show_image <- function(x) {
+  if (x@type != "image/png" || !is_installed("png")) {
+    return(invisible())
+  }
+
+  data <- jsonlite::base64_dec(x@data)
+  png <- png::readPNG(data)
+  grid::grid.newpage()
+  grid::grid.raster(png)
 }
 
 # Tools ------------------------------------------------------------------
@@ -282,7 +294,7 @@ method(format, ContentToolResult) <- function(
   if (tool_errored(x)) {
     value <- paste0(cli::col_red("Error: "), tool_error_string(x))
   } else {
-    value <- tool_string(x)
+    value <- tool_string_preview(x)
   }
 
   if (!is_string(value) || !grepl("\n", value)) {
@@ -306,26 +318,63 @@ tool_string <- function(x) {
   } else if (is.character(x@value)) {
     paste(x@value, collapse = "\n")
   } else {
-    jsonlite::toJSON(x@value, auto_unbox = TRUE)
+    withCallingHandlers(
+      jsonlite::toJSON(x@value, auto_unbox = TRUE),
+      error = function(err) {
+        cli::cli_abort(
+          c(
+            "Could not convert tool result from {.obj_type_friendly {x@value}} to JSON.",
+            "i" = "If you are the tool author, update the tool to convert the result to a string or JSON."
+          ),
+          parent = err
+        )
+      }
+    )
   }
+}
+
+tool_string_preview <- function(x) {
+  tryCatch(
+    tool_string(x),
+    error = function(err) {
+      cli::col_silver("<tool result preview not available>")
+    }
+  )
 }
 
 ContentJson <- new_class(
   "ContentJson",
   parent = Content,
-  properties = list(value = class_any)
+  properties = list(
+    # Some providers guarantee JSON returning it as part of the parsed results.
+    # Others return as a string, which may or may not be valid JSON. We don't
+    # want to force conversion on construction() since that's likely to be
+    # inconveniently early
+    data = class_any,
+    string = prop_string(allow_null = TRUE),
+
+    # Virtual property that always returns parsed JSON or errors
+    parsed = new_property(getter = function(self) {
+      if (is.null(self@string)) {
+        self@data
+      } else {
+        jsonlite::parse_json(self@string)
+      }
+    })
+  )
 )
+
 method(format, ContentJson) <- function(x, ...) {
   paste0(
     cli::format_inline("[{.strong data}] "),
-    pretty_json(x@value)
+    pretty_json(x@parsed)
   )
 }
 method(contents_html, ContentJson) <- function(content) {
-  sprintf('<pre><code>%s</code></pre>\n', pretty_json(content@value))
+  sprintf('<pre><code>%s</code></pre>\n', pretty_json(content@parsed))
 }
 method(contents_markdown, ContentJson) <- function(content) {
-  sprintf('```json\n%s\n```\n', pretty_json(content@value))
+  sprintf('```json\n%s\n```\n', pretty_json(content@parsed))
 }
 
 ContentUploaded <- new_class(

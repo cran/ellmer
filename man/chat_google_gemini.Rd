@@ -11,6 +11,7 @@ chat_google_gemini(
   system_prompt = NULL,
   base_url = "https://generativelanguage.googleapis.com/v1beta/",
   api_key = NULL,
+  credentials = NULL,
   model = NULL,
   params = NULL,
   api_args = list(),
@@ -31,22 +32,22 @@ chat_google_vertex(
 
 models_google_gemini(
   base_url = "https://generativelanguage.googleapis.com/v1beta/",
-  api_key = NULL
+  api_key = NULL,
+  credentials = NULL
 )
 
-models_google_vertex(location, project_id)
+models_google_vertex(location, project_id, credentials = NULL)
 }
 \arguments{
 \item{system_prompt}{A system prompt to set the behavior of the assistant.}
 
-\item{base_url}{The base URL to the endpoint; the default uses OpenAI.}
+\item{base_url}{The base URL to the endpoint; the default is OpenAI's
+public API.}
 
-\item{api_key}{API key to use for authentication.
+\item{api_key}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} Use \code{credentials} instead.}
 
-You generally should not supply this directly, but instead set the \code{GOOGLE_API_KEY} environment variable.
-The best place to set this is in \code{.Renviron},
-which you can easily edit by calling \code{usethis::edit_r_environ()}.
-For Gemini, you can alternatively set \code{GEMINI_API_KEY}.}
+\item{credentials}{A function that returns a list of authentication headers
+or \code{NULL}, the default, to use ambient credentials. See above for details.}
 
 \item{model}{The model to use for the chat (defaults to "gemini-2.5-flash").
 We regularly update the default, so we strongly recommend explicitly specifying a model for anything other than casual use.
@@ -87,12 +88,19 @@ to use Gemini.
 Use \code{\link[=google_upload]{google_upload()}} to upload files (PDFs, images, video, audio, etc.)
 \subsection{Authentication}{
 
-By default, \code{chat_google_gemini()} will use Google's default application
-credentials if there is no API key provided. This requires the \pkg{gargle}
+These functions try a number of authentication strategies, in this order:
+\itemize{
+\item An API key set in the \code{GOOGLE_API_KEY} env var, or,
+for \code{chat_google_gemini()} only, \code{GEMINI_API_KEY}.
+\item Google's default application credentials, if the \pkg{gargle} package
+is installed.
+\item Viewer-based credentials on Posit Connect, if the \pkg{connectcreds}
 package.
-
-It can also pick up on viewer-based credentials on Posit Connect. This in
-turn requires the \pkg{connectcreds} package.
+\item \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}. An browser-based OAuth flow, if
+you're in an interactive session. This currently uses an unverified
+OAuth app (so you will get a scary warning); we plan to verify in the
+near future.
+}
 }
 }
 \examples{
@@ -115,6 +123,7 @@ Other chatbots:
 \code{\link{chat_mistral}()},
 \code{\link{chat_ollama}()},
 \code{\link{chat_openai}()},
+\code{\link{chat_openai_compatible}()},
 \code{\link{chat_openrouter}()},
 \code{\link{chat_perplexity}()},
 \code{\link{chat_portkey}()}

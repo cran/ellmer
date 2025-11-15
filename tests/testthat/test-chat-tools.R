@@ -128,7 +128,7 @@ test_that("chat warns on tool failures", {
 
 test_that("tool calls can be rejected via `tool_request` callbacks", {
   vcr::local_cassette("chat-tools-reject-callback")
-  chat <- chat_openai_test()
+  chat <- chat_openai_test(model = "gpt-4.1-mini")
 
   chat$register_tool(tool(
     function(user) "red",
@@ -155,7 +155,7 @@ test_that("tool calls can be rejected via `tool_request` callbacks", {
 
 test_that("tool calls can be rejected via the tool function", {
   vcr::local_cassette("chat-tools-reject-tool-function")
-  chat <- chat_openai_test()
+  chat <- chat_openai_test(model = "gpt-4.1")
 
   chat$register_tool(tool(
     function(user) if (user == "Joe") tool_reject() else "red",
@@ -771,8 +771,7 @@ test_that("tool error warnings", {
 })
 
 test_that("match_tools() matches tools in a turn to a list of tools", {
-  turn_single <- Turn(
-    "assistant",
+  turn_single <- AssistantTurn(
     list(ContentToolRequest("y1", "unknown", list()))
   )
   expect_null(turn_single@contents[[1]]@tool)
@@ -785,4 +784,65 @@ test_that("match_tools() matches tools in a turn to a list of tools", {
 
   turn_matched <- match_tools(turn, tools)
   expect_equal(turn_matched, fixture_turn_with_tool_requests(with_tool = TRUE))
+})
+
+# Dangling tool requests ------------------------------------------------------
+test_that("dangling tool requests are inserted into user message", {
+  skip_if_not_installed("testthat", "3.3.0")
+  local_mocked_r6_class(
+    Chat,
+    private = list(
+      chat_impl = generator_method(function(self, private, user_turn, ...) {
+        self$add_turn(
+          user_turn,
+          AssistantTurn("Assistant response", tokens = c(0, 0, 0))
+        )
+      })
+    )
+  )
+  provider <- ProviderOpenAI("name", "model", "base_url")
+  chat <- Chat$new(provider)
+
+  # Simulate a broken chat history with dangling tool request
+  tool_request <- ContentToolRequest(id = "1", name = "get_date")
+  chat$set_turns(list(
+    UserTurn("What year is it today?"),
+    AssistantTurn(list(tool_request))
+  ))
+  chat$chat("try again")
+
+  turns <- chat$get_turns()
+  expect_s3_class(turns[[3]], "ellmer::UserTurn")
+  # And UserTurn must contain a result that matches the request
+  expect_equal(
+    turns[[3]],
+    UserTurn(list(
+      ContentToolResult(
+        error = "Chat ended before the tool could be invoked.",
+        request = tool_request
+      ),
+      ContentText("try again")
+    ))
+  )
+})
+
+test_that("can resume chat after dangling tool requests", {
+  vcr::local_cassette("chat-tools-dangling")
+
+  chat <- chat_openai_test("Be terse")
+  chat$register_tool(tool(
+    \() "2001-02-09",
+    name = "get_date",
+    description = "Get todays date"
+  ))
+
+  # Simulate a broken chat history with dangling tool request
+  tool_request <- ContentToolRequest(id = "1", name = "get_date")
+  chat$set_turns(list(
+    UserTurn("What year is it today?"),
+    AssistantTurn(list(tool_request))
+  ))
+
+  # resume chat and get answer, not error
+  expect_match(chat$chat("try again"), "2001")
 })

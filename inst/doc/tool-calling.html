@@ -385,8 +385,8 @@ tool. Chat models generally do not know the current time, which makes
 questions like these impossible.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>(<span class="at">model =</span> <span class="st">&quot;gpt-4o&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;How long ago did Neil Armstrong touch down on the moon?&quot;</span>)</span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt; Neil Armstrong touched down on the Moon on July 20, 1969. As of October 2023, </span></span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; that event occurred 54 years ago.</span></span></code></pre></div>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt; Neil Armstrong touched down on the moon on July 20, 1969. As of 2023, that was </span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; 54 years ago.</span></span></code></pre></div>
 <p>Since the model doesn’t know what day it is, the result is
 incorrect.</p>
 </div>
@@ -436,27 +436,27 @@ with <code>$register_tool()</code>:</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">register_tool</span>(get_current_time)</span></code></pre></div>
 <p>That’s all we need to do! Let’s retry our query:</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;How long ago did Neil Armstrong touch down on the moon?&quot;</span>)</span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt; Neil Armstrong touched down on the Moon on July 20, 1969. As of June 25, 2025, </span></span>
-<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt; that event occurred 55 years and approximately 11 months ago.</span></span></code></pre></div>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt; Neil Armstrong touched down on the moon on July 20, 1969. As of June 2025, that</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt; was almost 56 years ago.</span></span></code></pre></div>
 <p>That’s correct! Without any further guidance, the chat model decided
 to call our tool function and successfully used its result in
 formulating its response.</p>
 <p>If we print the chat we can see where the model decided to use the
 tool:</p>
 <div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>chat</span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-4o turns=6 tokens=373/86 $0.00&gt;</span></span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt; ── user [19] ───────────────────────────────────────────────────────────────────</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-4o turns=6 input=355 output=79 cost=$0.00&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt; ── user ────────────────────────────────────────────────────────────────────────</span></span>
 <span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; How long ago did Neil Armstrong touch down on the moon?</span></span>
-<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt; ── assistant [31] ──────────────────────────────────────────────────────────────</span></span>
-<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; Neil Armstrong touched down on the Moon on July 20, 1969. As of October 2023, that event occurred 54 years ago.</span></span>
-<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; ── user [108] ──────────────────────────────────────────────────────────────────</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt; ── assistant [input=19 output=30 cost=$0.00] ───────────────────────────────────</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; Neil Armstrong touched down on the moon on July 20, 1969. As of 2023, that was 54 years ago.</span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; ── user ────────────────────────────────────────────────────────────────────────</span></span>
 <span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; How long ago did Neil Armstrong touch down on the moon?</span></span>
-<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt; ── assistant [15] ──────────────────────────────────────────────────────────────</span></span>
-<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt; [tool request (call_olBG8OUjyIj914iwNBjw35dv)]: get_current_time(tz = &quot;UTC&quot;)</span></span>
-<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt; ── user [23] ───────────────────────────────────────────────────────────────────</span></span>
-<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt; [tool result  (call_olBG8OUjyIj914iwNBjw35dv)]: 2025-06-25 16:53:23 UTC</span></span>
-<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt; ── assistant [40] ──────────────────────────────────────────────────────────────</span></span>
-<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt; Neil Armstrong touched down on the Moon on July 20, 1969. As of June 25, 2025, that event occurred 55 years and approximately 11 months ago.</span></span></code></pre></div>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt; ── assistant [input=150 output=16 cost=$0.00] ──────────────────────────────────</span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt; [tool request (fc_03a8c37ecdd381e601690baca5278c81909e74f03d120da606)]: get_current_time(tz = &quot;UTC&quot;)</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt; ── user ────────────────────────────────────────────────────────────────────────</span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt; [tool result  (fc_03a8c37ecdd381e601690baca5278c81909e74f03d120da606)]: 2025-06-25 16:53:23 UTC</span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt; ── assistant [input=186 output=33 cost=$0.00] ──────────────────────────────────</span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt; Neil Armstrong touched down on the moon on July 20, 1969. As of June 2025, that was almost 56 years ago.</span></span></code></pre></div>
 <p>(Full disclosure: I originally tried this example with the default
 model of <code>gpt-4o-mini</code> and it got the tool calling right but
 the date math wrong, hence the explicit
@@ -507,7 +507,7 @@ experiments suggest is good for LLMs.</p>
 <span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a>  },</span>
 <span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">&quot;get_weather&quot;</span>,</span>
 <span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a>  <span class="at">description =</span> <span class="st">&quot;</span></span>
-<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="st">    Report on weather conditions in multiple cities. For efficiency, request </span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="st">    Report on weather conditions in multiple cities. For efficiency, request</span></span>
 <span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="st">    all weather updates using a single tool call</span></span>
 <span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="st">  &quot;</span>,</span>
 <span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a>  <span class="at">arguments =</span> <span class="fu">list</span>(</span>
@@ -518,30 +518,70 @@ experiments suggest is good for LLMs.</p>
 <div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
 <span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
 <span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">register_tool</span>(get_weather)</span>
-<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;Give me a weather udpate for London and Chicago&quot;</span>)</span>
-<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="co">#&gt; Here&#39;s the latest weather update:</span></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;Give me a weather update for London and Chicago&quot;</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="co">#&gt; Here is the weather update:</span></span>
 <span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co">#&gt; - London: Heavy rain, cool temperatures, and strong winds.</span></span>
-<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; - Chicago: Overcast skies, warm temperatures, and strong winds.</span></span>
-<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co">#&gt; Let me know if you need a forecast for more cities or details!</span></span></code></pre></div>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co">#&gt; - London: Heavy rain, cool temperature, and strong winds.</span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; - Chicago: Overcast skies, warm temperature, and strong winds.</span></span></code></pre></div>
 <p>We can print the chat to confirm that the model only performed a
 single tool call:</p>
 <div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>chat</span>
-<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-4.1 turns=4 tokens=213/65 $0.00&gt;</span></span>
-<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co">#&gt; ── user [74] ───────────────────────────────────────────────────────────────────</span></span>
-<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co">#&gt; Give me a weather udpate for London and Chicago</span></span>
-<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="co">#&gt; ── assistant [17] ──────────────────────────────────────────────────────────────</span></span>
-<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#&gt; [tool request (call_0epVfhsX7e8pEy0M1NaY9Vca)]: get_weather(cities = c(&quot;London&quot;, &quot;Chicago&quot;))</span></span>
-<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="co">#&gt; ── user [48] ───────────────────────────────────────────────────────────────────</span></span>
-<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; [tool result  (call_0epVfhsX7e8pEy0M1NaY9Vca)]: [{&quot;city&quot;:&quot;London&quot;,&quot;raining&quot;:&quot;heavy&quot;,&quot;temperature&quot;:&quot;cool&quot;,&quot;wind&quot;:&quot;strong&quot;},{&quot;city&quot;:&quot;Chicago&quot;,&quot;raining&quot;:&quot;overcast&quot;,&quot;temperature&quot;:&quot;warm&quot;,&quot;wind&quot;:&quot;strong&quot;}]</span></span>
-<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="co">#&gt; ── assistant [48] ──────────────────────────────────────────────────────────────</span></span>
-<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co">#&gt; Here&#39;s the latest weather update:</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-4.1 turns=4 input=197 output=53 cost=$0.00&gt;</span></span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co">#&gt; ── user ────────────────────────────────────────────────────────────────────────</span></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co">#&gt; Give me a weather update for London and Chicago</span></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="co">#&gt; ── assistant [input=67 output=18 cost=$0.00] ───────────────────────────────────</span></span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#&gt; [tool request (fc_0695837b713996880169151e123e0881939637e2fd9d66180e)]: get_weather(cities = c(&quot;London&quot;, &quot;Chicago&quot;))</span></span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="co">#&gt; ── user ────────────────────────────────────────────────────────────────────────</span></span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; [tool result  (fc_0695837b713996880169151e123e0881939637e2fd9d66180e)]: [{&quot;city&quot;:&quot;London&quot;,&quot;raining&quot;:&quot;heavy&quot;,&quot;temperature&quot;:&quot;cool&quot;,&quot;wind&quot;:&quot;strong&quot;},{&quot;city&quot;:&quot;Chicago&quot;,&quot;raining&quot;:&quot;overcast&quot;,&quot;temperature&quot;:&quot;warm&quot;,&quot;wind&quot;:&quot;strong&quot;}]</span></span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="co">#&gt; ── assistant [input=130 output=35 cost=$0.00] ──────────────────────────────────</span></span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co">#&gt; Here is the weather update:</span></span>
 <span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a><span class="co">#&gt; - London: Heavy rain, cool temperatures, and strong winds.</span></span>
-<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a><span class="co">#&gt; - Chicago: Overcast skies, warm temperatures, and strong winds.</span></span>
-<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a><span class="co">#&gt; Let me know if you need a forecast for more cities or details!</span></span></code></pre></div>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a><span class="co">#&gt; - London: Heavy rain, cool temperature, and strong winds.</span></span>
+<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a><span class="co">#&gt; - Chicago: Overcast skies, warm temperature, and strong winds.</span></span></code></pre></div>
+</div>
+<div id="image-and-pdf-tool-output" class="section level3">
+<h3>Image and PDF tool output</h3>
+<p>ellmer allow tools to return image or PDF content that can be
+returned with the tool result, if the LLM or API supports vision
+capabilities.</p>
+<p>Simply return a <code>content_image_file()</code>,
+<code>content_pdf_file()</code>, or similar content type from the tool
+function. For example, here’s a simple tool to screenshot a website:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>screenshot_website <span class="ot">&lt;-</span> <span class="fu">tool</span>(</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>  <span class="cf">function</span>(url) {</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>    tmpf <span class="ot">&lt;-</span> withr<span class="sc">::</span><span class="fu">local_tempfile</span>(<span class="at">fileext =</span> <span class="st">&quot;.png&quot;</span>)</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>    webshot2<span class="sc">::</span><span class="fu">webshot</span>(url, <span class="at">file =</span> tmpf)</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>    <span class="fu">content_image_file</span>(tmpf)</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>  },</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">&quot;screenshot_website&quot;</span>,</span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>  <span class="at">description =</span> <span class="st">&quot;Take a screenshot of a website.&quot;</span>,</span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a>  <span class="at">arguments =</span> <span class="fu">list</span>(</span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a>    <span class="at">url =</span> <span class="fu">type_string</span>(<span class="st">&quot;The URL of the website&quot;</span>)</span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a>  )</span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a>)</span></code></pre></div>
+<p>You could use this tool to allow the LLM to “see” websites, like <a href="https://tidyverse.org">the tidyverse website</a>:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">register_tool</span>(screenshot_website)</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;Describe the design aesthetic of https://tidyverse.org&quot;</span>)</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a><span class="co">#&gt; https://tidyverse.org screenshot completed</span></span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a><span class="co">#&gt; The design aesthetic of the Tidyverse website (https://tidyverse.org) is</span></span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a><span class="co">#&gt; clean, modern, and minimalistic, with several distinct features:</span></span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a><span class="co">#&gt;</span></span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a><span class="co">#&gt; - **Color Palette**: The overall site uses a lot of white space with navy</span></span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a><span class="co">#&gt;   and dark backgrounds for some elements, accentuated by the colorful</span></span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a><span class="co">#&gt;   hexagonal logos for various R packages.</span></span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a><span class="co">#&gt; - **Typography**: Simple, sans-serif fonts contribute to readability and</span></span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a><span class="co">#&gt;   a contemporary look.</span></span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a><span class="co">#&gt; - **Hexagonal Icons**: Prominent display of tidyverse package logos in</span></span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a><span class="co">#&gt;   hexagonal shapes, emphasizing the modular, package-oriented</span></span>
+<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a><span class="co">#&gt;   nature of the Tidyverse.</span></span>
+<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a><span class="co">#&gt; - **Layout**: A balanced, spacious two-column layout. The left side</span></span>
+<span id="cb13-18"><a href="#cb13-18" tabindex="-1"></a><span class="co">#&gt;   features graphic elements; the right side provides concise, text-based</span></span>
+<span id="cb13-19"><a href="#cb13-19" tabindex="-1"></a><span class="co">#&gt;   information.</span></span>
+<span id="cb13-20"><a href="#cb13-20" tabindex="-1"></a><span class="co">#&gt;</span></span>
+<span id="cb13-21"><a href="#cb13-21" tabindex="-1"></a><span class="co">#&gt; Overall, the design communicates clarity, ease of use, and a focus on</span></span>
+<span id="cb13-22"><a href="#cb13-22" tabindex="-1"></a><span class="co">#&gt; modern data science tools.</span></span></code></pre></div>
 </div>
 </div>
 

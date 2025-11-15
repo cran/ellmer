@@ -20,6 +20,7 @@ chat$chat_structured(
 )
 
 ## -----------------------------------------------------------------------------
+chat <- chat_openai()
 chat$chat_structured(
   content_image_url("https://www.r-project.org/Rlogo.png"),
   type = type_object(
@@ -55,9 +56,9 @@ list_of_integers <- type_array(type_integer_vector)
 
 ## -----------------------------------------------------------------------------
 type_person2 <- type_object(
-  name = type_string(),
-  age = type_integer(),
-  hobbies = type_array(type_string())
+name = type_string(),
+age = type_integer(),
+hobbies = type_array(type_string())
 )
 
 ## -----------------------------------------------------------------------------
