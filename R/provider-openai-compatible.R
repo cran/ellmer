@@ -31,6 +31,11 @@ NULL
 #'   with [modifyList()].
 #' @param api_headers Named character vector of arbitrary extra headers appended
 #'   to every chat API call.
+#' @param preserve_thinking If `TRUE`, reasoning content returned by the model
+#'   is included when sending conversation history back to the API. If `FALSE`
+#'   (the default), reasoning content is still captured in the turn but dropped
+#'   from subsequent requests. Set to `TRUE` if your provider requires or
+#'   benefits from seeing prior reasoning in multi-turn conversations.
 #' @param echo One of the following options:
 #'   * `none`: don't emit any output (default when running in a function).
 #'   * `output`: echo text and tool-calling output as it streams in (default
@@ -60,6 +65,7 @@ chat_openai_compatible <- function(
   params = NULL,
   api_args = list(),
   api_headers = character(),
+  preserve_thinking = FALSE,
   echo = c("none", "output", "all")
 ) {
   if (missing(base_url)) {
@@ -95,7 +101,8 @@ chat_openai_compatible <- function(
     params = params %||% params(),
     extra_args = api_args,
     extra_headers = api_headers,
-    credentials = credentials
+    credentials = credentials,
+    preserve_thinking = preserve_thinking
   )
   Chat$new(provider = provider, system_prompt = system_prompt, echo = echo)
 }
@@ -126,7 +133,10 @@ chat_openai_compatible_test <- function(
 
 ProviderOpenAICompatible <- new_class(
   "ProviderOpenAICompatible",
-  parent = Provider
+  parent = Provider,
+  properties = list(
+    preserve_thinking = new_property(class_logical, default = FALSE)
+  )
 )
 
 openai_key_exists <- function() {
@@ -216,15 +226,15 @@ method(chat_params, ProviderOpenAICompatible) <- function(provider, params) {
   standardise_params(
     params,
     c(
-      temperature = "temperature",
-      top_p = "top_p",
       frequency_penalty = "frequency_penalty",
+      logprobs = "log_probs",
+      max_completion_tokens = "max_tokens",
       presence_penalty = "presence_penalty",
       seed = "seed",
-      max_completion_tokens = "max_tokens",
-      logprobs = "log_probs",
+      stop = "stop_sequences",
+      temperature = "temperature",
       top_logprobs = "top_k",
-      stop = "stop_sequences"
+      top_p = "top_p"
     )
   )
 }
@@ -238,12 +248,22 @@ method(stream_parse, ProviderOpenAICompatible) <- function(provider, event) {
 
   jsonlite::parse_json(event$data)
 }
-method(stream_text, ProviderOpenAICompatible) <- function(provider, event) {
+method(stream_content, ProviderOpenAICompatible) <- function(provider, event) {
   if (length(event$choices) == 0) {
-    NULL
-  } else {
-    event$choices[[1]]$delta[["content"]]
+    return(NULL)
   }
+  delta <- event$choices[[1]]$delta
+
+  reasoning <- delta[["reasoning_content"]]
+  if (!is.null(reasoning)) {
+    return(ContentThinking(reasoning))
+  }
+
+  text <- delta[["content"]]
+  if (is.null(text)) {
+    return(NULL)
+  }
+  ContentText(text)
 }
 method(stream_merge_chunks, ProviderOpenAICompatible) <- function(
   provider,
@@ -263,7 +283,7 @@ method(value_tokens, ProviderOpenAICompatible) <- function(provider, json) {
 
   tokens(
     input = (usage$prompt_tokens %||% 0) - cached_tokens,
-    output = usage$completion_tokens,
+    output = usage$completion_tokens %||% 0,
     cached_input = cached_tokens
   )
 }
@@ -280,6 +300,12 @@ method(value_turn, ProviderOpenAICompatible) <- function(
     message <- result$choices[[1]]$message
   }
 
+  thinking <- list()
+  reasoning <- message$reasoning_content
+  if (is_string(reasoning) && nzchar(reasoning)) {
+    thinking <- list(ContentThinking(reasoning))
+  }
+
   if (has_type) {
     if (is_string(message$content)) {
       content <- list(ContentJson(string = message$content[[1]]))
@@ -287,7 +313,13 @@ method(value_turn, ProviderOpenAICompatible) <- function(
       content <- list(ContentJson(data = message$content))
     }
   } else {
-    content <- lapply(message$content, as_content)
+    # Some providers (e.g. Databricks) return content: "" instead of
+    # content: null for tool-only turns; treat empty strings as null
+    if (is_string(message$content) && !nzchar(message$content)) {
+      content <- list()
+    } else {
+      content <- lapply(message$content, as_content)
+    }
   }
   if (has_name(message, "tool_calls")) {
     calls <- lapply(message$tool_calls, function(call) {
@@ -301,6 +333,8 @@ method(value_turn, ProviderOpenAICompatible) <- function(
     })
     content <- c(content, calls)
   }
+
+  content <- c(thinking, content)
 
   tokens <- value_tokens(provider, result)
   cost <- get_token_cost(provider, tokens)
@@ -340,14 +374,35 @@ method(as_json, list(ProviderOpenAICompatible, Turn)) <- function(
 
     c(tools, user)
   } else if (is_assistant_turn(x)) {
-    # Tool requests come out of content and go into own argument
-    is_tool <- map_lgl(x@contents, is_tool_request)
-    content <- as_json(provider, x@contents[!is_tool], ...)
-    tool_calls <- as_json(provider, x@contents[is_tool], ...)
+    # Drop empty ContentText to avoid API errors from providers that reject
+    # empty text content blocks (e.g. Databricks returns content: "" for
+    # tool-only turns, then rejects it on replay)
+    is_empty_text <- map_lgl(x@contents, function(c) {
+      S7_inherits(c, ContentText) && !nzchar(c@text)
+    })
+    contents <- x@contents[!is_empty_text]
+    if (length(contents) == 0) {
+      return(NULL)
+    }
+    # Thinking and tool requests come out of content
+    is_thinking <- map_lgl(contents, S7_inherits, ContentThinking)
+    is_tool <- map_lgl(contents, is_tool_request)
+    other <- contents[!is_thinking & !is_tool]
+    content <- as_json(provider, other, ...)
+    tool_calls <- as_json(provider, contents[is_tool], ...)
+
+    reasoning_content <- NULL
+    if (provider@preserve_thinking) {
+      thinking_texts <- map_chr(contents[is_thinking], function(c) c@thinking)
+      if (length(thinking_texts) > 0) {
+        reasoning_content <- paste0(thinking_texts, collapse = "")
+      }
+    }
 
     list(
       compact(list(
         role = "assistant",
+        reasoning_content = reasoning_content,
         content = content,
         tool_calls = tool_calls
       ))
@@ -405,7 +460,7 @@ method(as_json, list(ProviderOpenAICompatible, ContentToolRequest)) <- function(
   x,
   ...
 ) {
-  json_args <- jsonlite::toJSON(x@arguments)
+  json_args <- to_json(x@arguments)
   list(
     id = x@id,
     `function` = list(name = x@name, arguments = json_args),

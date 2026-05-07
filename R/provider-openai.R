@@ -19,8 +19,7 @@ NULL
 #' [developer platform](https://platform.openai.com).
 #'
 #' @param system_prompt A system prompt to set the behavior of the assistant.
-#' @param base_url The base URL to the endpoint; the default is OpenAI's
-#'   public API.
+#' @param base_url The base URL to the API endpoint.
 #' @param api_key `r lifecycle::badge("deprecated")` Use `credentials` instead.
 #' @param credentials `r api_key_param("OPENAI_API_KEY")`
 #' @param model `r param_model("gpt-4.1", "openai")`
@@ -241,16 +240,19 @@ method(chat_params, ProviderOpenAI) <- function(provider, params) {
 
 # OpenAI -> ellmer --------------------------------------------------------------
 
-method(stream_text, ProviderOpenAI) <- function(provider, event) {
+method(stream_content, ProviderOpenAI) <- function(provider, event) {
   if (event$type == "response.output_text.delta") {
     # https://platform.openai.com/docs/api-reference/responses-streaming/response/output_text/delta
-    event$delta
+    if (is.null(event$delta)) {
+      return(NULL)
+    }
+    ContentText(event$delta)
   } else if (event$type == "response.reasoning_summary_text.delta") {
     # https://platform.openai.com/docs/api-reference/responses-streaming/response/reasoning_summary_text/delta
-    event$delta
+    ContentThinking(event$delta)
   } else if (event$type == "response.reasoning_summary_text.done") {
     # https://platform.openai.com/docs/api-reference/responses-streaming/response/reasoning_summary_text/done
-    "\n\n"
+    NULL
   }
 }
 method(stream_merge_chunks, ProviderOpenAI) <- function(
@@ -278,7 +280,7 @@ method(value_tokens, ProviderOpenAI) <- function(provider, json) {
 
   tokens(
     input = (usage$input_tokens %||% 0) - cached_tokens,
-    output = usage$output_tokens,
+    output = usage$output_tokens %||% 0,
     cached_input = cached_tokens
   )
 }
@@ -312,7 +314,14 @@ method(value_turn, ProviderOpenAI) <- function(
       ContentImageInline(mime_type, output$result)
     } else if (output$type == "web_search_call") {
       # https://platform.openai.com/docs/guides/tools-web-search#output-and-citations
-      ContentToolRequestSearch(query = output$action$query, json = output)
+      first_query <- if (length(output$action$queries)) {
+        output$action$queries[[1]]
+      }
+      query <- output$action$query %||%
+        first_query %||%
+        output$action$url %||%
+        "web search"
+      ContentToolRequestSearch(query = query, json = output)
     } else {
       browser()
       cli::cli_abort(
@@ -323,7 +332,8 @@ method(value_turn, ProviderOpenAI) <- function(
   })
 
   tokens <- value_tokens(provider, result)
-  cost <- get_token_cost(provider, tokens, variant = result$service_tier)
+  variant <- result$service_tier %||% "default"
+  cost <- get_token_cost(provider, tokens, variant = variant)
   AssistantTurn(
     contents = contents,
     json = result,
@@ -421,7 +431,7 @@ method(as_json, list(ProviderOpenAI, ContentToolRequest)) <- function(
     type = "function_call",
     call_id = x@id,
     name = x@name,
-    arguments = jsonlite::toJSON(x@arguments)
+    arguments = to_json(x@arguments)
   )
 }
 
@@ -463,7 +473,7 @@ method(batch_submit, ProviderOpenAI) <- function(
   conversations,
   type = NULL
 ) {
-  path <- withr::local_tempfile()
+  path <- local_tempfile()
 
   # First put the requests in a file
   # https://platform.openai.com/docs/api-reference/batch/request-input
@@ -482,7 +492,7 @@ method(batch_submit, ProviderOpenAI) <- function(
       body = body
     )
   })
-  json <- map_chr(requests, jsonlite::toJSON, auto_unbox = TRUE)
+  json <- map_chr(requests, to_json)
   writeLines(json, path)
   # Then upload it
   uploaded <- openai_upload(provider, path)

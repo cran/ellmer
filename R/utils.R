@@ -30,11 +30,6 @@ key_exists <- function(name) {
   !identical(Sys.getenv(name), "")
 }
 
-defer <- function(expr, env = caller_env(), after = FALSE) {
-  thunk <- as.call(list(function() expr))
-  do.call(on.exit, list(thunk, TRUE, after), envir = env)
-}
-
 set_default <- function(value, default, arg = caller_arg(value)) {
   if (is.null(value)) {
     if (!is_testing() || is_snapshot()) {
@@ -327,4 +322,8 @@ extract_custom_id <- function(json_string) {
   }
 
   result[2] # Second element is the captured group
+}
+
+to_json <- function(x) {
+  jsonlite::toJSON(x, auto_unbox = TRUE)
 }
