@@ -7,6 +7,8 @@ NULL
 #' Chat with an Anthropic Claude model
 #'
 #' @description
+#' `r support_badge("official")`
+#'
 #' [Anthropic](https://www.anthropic.com) provides a number of chat based models
 #' under the [Claude](https://claude.com/product/overview) moniker. Note that a
 #' Claude Pro membership does not give you the ability to call models via the
@@ -55,7 +57,7 @@ NULL
 #'
 #' @inheritParams chat_openai
 #' @inherit chat_openai return
-#' @param model `r param_model("claude-sonnet-4-5-20250929", "anthropic")`
+#' @param model `r param_model("claude-sonnet-4-6", "anthropic")`
 #' @param api_key `r lifecycle::badge("deprecated")` Use `credentials` instead.
 #' @param credentials `r api_key_param("ANTHROPIC_API_KEY")`
 #' @param base_url The base URL to the endpoint; the default is Claude's
@@ -90,7 +92,7 @@ chat_anthropic <- function(
 ) {
   echo <- check_echo(echo)
 
-  model <- set_default(model, "claude-sonnet-4-5-20250929")
+  model <- set_default(model, "claude-sonnet-4-6")
   cache <- arg_match(cache)
 
   credentials <- as_credentials(
@@ -121,7 +123,7 @@ chat_claude <- chat_anthropic
 
 chat_anthropic_test <- function(
   ...,
-  model = "claude-sonnet-4-5-20250929",
+  model = "claude-sonnet-4-6",
   params = NULL,
   echo = "none"
 ) {
@@ -201,22 +203,44 @@ method(chat_body, ProviderAnthropic) <- function(
   }))
 
   if (!is.null(type)) {
-    tool_def <- ToolDef(
-      function(...) {},
-      name = "_structured_tool_call",
-      description = "Extract structured data",
-      arguments = type_object(data = type)
-    )
-    tools[[tool_def@name]] <- tool_def
-    tool_choice <- list(type = "tool", name = tool_def@name)
-    stream <- FALSE
+    if (
+      has_claude_structured_output(provider@model) &&
+        !type_has_additional_properties(type)
+    ) {
+      output_config <- list(
+        format = list(
+          type = "json_schema",
+          schema = as_json(provider, type)
+        )
+      )
+      tool_choice <- NULL
+    } else {
+      tool_def <- ToolDef(
+        function(...) {},
+        name = "_structured_tool_call",
+        description = "Extract structured data",
+        arguments = type_object(data = type)
+      )
+      tools[[tool_def@name]] <- tool_def
+      tool_choice <- list(type = "tool", name = tool_def@name)
+      output_config <- NULL
+    }
   } else {
     tool_choice <- NULL
+    output_config <- NULL
   }
   tools <- as_json(provider, unname(tools))
 
   params <- chat_params(provider, provider@params)
-  if (has_name(params, "budget_tokens")) {
+
+  if (has_name(params, "reasoning_effort")) {
+    thinking <- list(type = "adaptive")
+    output_config <- modify_list(
+      output_config,
+      list(effort = params$reasoning_effort)
+    )
+    params$reasoning_effort <- NULL
+  } else if (has_name(params, "budget_tokens")) {
     thinking <- list(
       type = "enabled",
       budget_tokens = params$budget_tokens
@@ -234,6 +258,7 @@ method(chat_body, ProviderAnthropic) <- function(
     tools = tools,
     tool_choice = tool_choice,
     thinking = thinking,
+    output_config = output_config,
     !!!params
   ))
 }
@@ -247,7 +272,8 @@ method(chat_params, ProviderAnthropic) <- function(provider, params) {
       top_k = "top_k",
       max_tokens = "max_tokens",
       stop_sequences = "stop_sequences",
-      budget_tokens = "reasoning_tokens"
+      budget_tokens = "reasoning_tokens",
+      reasoning_effort = "reasoning_effort"
     )
   )
 
@@ -351,6 +377,24 @@ method(value_tokens, ProviderAnthropic) <- function(provider, json) {
   )
 }
 
+# https://docs.anthropic.com/en/api/handling-stop-reasons
+method(value_finish_reason, ProviderAnthropic) <- function(provider, result) {
+  reason <- result$stop_reason
+  if (is.null(reason)) {
+    return(NA_character_)
+  }
+  switch(
+    reason,
+    end_turn = "success",
+    tool_use = "tool_use",
+    max_tokens = "max_tokens",
+    model_context_window_exceeded = "context_window",
+    stop_sequence = "stop_sequence",
+    refusal = "content_filter",
+    I(reason)
+  )
+}
+
 method(value_turn, ProviderAnthropic) <- function(
   provider,
   result,
@@ -358,7 +402,11 @@ method(value_turn, ProviderAnthropic) <- function(
 ) {
   contents <- lapply(result$content, function(content) {
     if (content$type == "text") {
-      ContentText(content$text)
+      if (has_type && has_claude_structured_output(provider@model)) {
+        ContentJson(string = content$text)
+      } else {
+        ContentText(content$text)
+      }
     } else if (content$type == "tool_use") {
       if (has_type) {
         ContentJson(data = content$input$data)
@@ -415,7 +463,13 @@ method(value_turn, ProviderAnthropic) <- function(
   cost_tokens <- tokens
   cost_tokens$input <- cost_tokens$input + cache_write * 0.25
   cost <- get_token_cost(provider, cost_tokens)
-  AssistantTurn(contents, json = result, tokens = unlist(tokens), cost = cost)
+  AssistantTurn(
+    contents,
+    json = result,
+    tokens = unlist(tokens),
+    cost = cost,
+    finish_reason = value_finish_reason(provider, result)
+  )
 }
 
 # ellmer -> Claude --------------------------------------------------------------
@@ -649,7 +703,7 @@ method(batch_retrieve, ProviderAnthropic) <- function(provider, batch) {
   req <- req_url(req, batch$results_url)
   req <- req_progress(req, "down")
 
-  path <- local_tempfile()
+  path <- withr::local_tempfile()
   req <- req_perform(req, path = path)
 
   lines <- readLines(path, warn = FALSE)
@@ -696,6 +750,14 @@ models_claude <- function(
     cache = "none"
   )
 
+  models_list(provider)
+}
+
+#' @export
+#' @rdname chat_anthropic
+models_anthropic <- models_claude
+
+method(models_list, ProviderAnthropic) <- function(provider) {
   req <- base_request(provider)
   req <- req_url_path_append(req, "/models")
   resp <- req_perform(req)
@@ -715,10 +777,6 @@ models_claude <- function(
   df[order(-xtfrm(df$created_at)), ]
 }
 
-#' @export
-#' @rdname chat_anthropic
-models_anthropic <- models_claude
-
 # Helpers ----------------------------------------------------------------
 
 # From httr2
@@ -735,4 +793,10 @@ cache_control <- function(provider) {
       ttl = provider@cache
     )
   }
+}
+
+has_claude_structured_output <- function(model) {
+  # Matches Claude 4.5+ models
+  # https://platform.claude.com/docs/en/build-with-claude/structured-outputs
+  grepl("^claude-\\w+-4-[5-9](-|$)", model)
 }

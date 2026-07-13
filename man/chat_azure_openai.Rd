@@ -61,6 +61,8 @@ to every chat API call.}
 A \link{Chat} object.
 }
 \description{
+\ifelse{html}{\figure{support-official.svg}{options: alt='[Official supported provider]'}}{\strong{[Official supported provider]}}
+
 The \href{https://azure.microsoft.com/en-us/products/ai-services/openai-service}{Azure OpenAI server}
 hosts a number of open source models as well as proprietary models
 from OpenAI.
@@ -103,6 +105,7 @@ Other chatbots:
 \code{\link[=chat_openai_compatible]{chat_openai_compatible()}},
 \code{\link[=chat_openrouter]{chat_openrouter()}},
 \code{\link[=chat_perplexity]{chat_perplexity()}},
-\code{\link[=chat_portkey]{chat_portkey()}}
+\code{\link[=chat_portkey]{chat_portkey()}},
+\code{\link[=chat_posit]{chat_posit()}}
 }
 \concept{chatbots}

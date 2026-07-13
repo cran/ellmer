@@ -254,7 +254,7 @@ method(stream_content, ProviderOpenAICompatible) <- function(provider, event) {
   }
   delta <- event$choices[[1]]$delta
 
-  reasoning <- delta[["reasoning_content"]]
+  reasoning <- delta[["reasoning"]] %||% delta[["reasoning_content"]]
   if (!is.null(reasoning)) {
     return(ContentThinking(reasoning))
   }
@@ -288,6 +288,25 @@ method(value_tokens, ProviderOpenAICompatible) <- function(provider, json) {
   )
 }
 
+# https://platform.openai.com/docs/api-reference/chat/create
+method(value_finish_reason, ProviderOpenAICompatible) <- function(
+  provider,
+  result
+) {
+  reason <- result$choices[[1]]$finish_reason
+  if (is.null(reason)) {
+    return(NA_character_)
+  }
+  switch(
+    reason,
+    stop = "success",
+    tool_calls = "tool_use",
+    length = "max_tokens",
+    content_filter = "content_filter",
+    I(reason)
+  )
+}
+
 method(value_turn, ProviderOpenAICompatible) <- function(
   provider,
   result,
@@ -301,7 +320,7 @@ method(value_turn, ProviderOpenAICompatible) <- function(
   }
 
   thinking <- list()
-  reasoning <- message$reasoning_content
+  reasoning <- message$reasoning %||% message$reasoning_content
   if (is_string(reasoning) && nzchar(reasoning)) {
     thinking <- list(ContentThinking(reasoning))
   }
@@ -329,7 +348,11 @@ method(value_turn, ProviderOpenAICompatible) <- function(
         jsonlite::parse_json(call$`function`$arguments),
         error = function(cnd) list()
       )
-      ContentToolRequest(name = name, arguments = args, id = call$id)
+      ContentToolRequest(
+        name = name,
+        arguments = args %||% list(),
+        id = call$id
+      )
     })
     content <- c(content, calls)
   }
@@ -338,10 +361,29 @@ method(value_turn, ProviderOpenAICompatible) <- function(
 
   tokens <- value_tokens(provider, result)
   cost <- get_token_cost(provider, tokens)
-  AssistantTurn(content, json = result, tokens = unlist(tokens), cost = cost)
+
+  AssistantTurn(
+    content,
+    json = result,
+    tokens = unlist(tokens),
+    cost = cost,
+    finish_reason = value_finish_reason(provider, result)
+  )
 }
 
 # ellmer -> OpenAI --------------------------------------------------------------
+
+# Most providers use "reasoning" but a subset use "reasoning_content" (#1004)
+reasoning_content_field <- function(provider) {
+  if (
+    S7_inherits(provider, ProviderLMStudio) ||
+      S7_inherits(provider, ProviderDeepSeek)
+  ) {
+    "reasoning_content"
+  } else {
+    "reasoning"
+  }
+}
 
 method(as_json, list(ProviderOpenAICompatible, Turn)) <- function(
   provider,
@@ -399,14 +441,13 @@ method(as_json, list(ProviderOpenAICompatible, Turn)) <- function(
       }
     }
 
-    list(
-      compact(list(
-        role = "assistant",
-        reasoning_content = reasoning_content,
-        content = content,
-        tool_calls = tool_calls
-      ))
-    )
+    result <- compact(list(
+      role = "assistant",
+      content = content,
+      tool_calls = tool_calls
+    ))
+    result[[reasoning_content_field(provider)]] <- reasoning_content
+    list(result)
   } else {
     cli::cli_abort("Unknown role {x@role}", .internal = TRUE)
   }
@@ -514,6 +555,28 @@ method(as_json, list(ProviderOpenAICompatible, TypeObject)) <- function(
   )
 }
 
+
+# Models -----------------------------------------------------------------------
+
+method(models_list, ProviderOpenAICompatible) <- function(provider) {
+  req <- base_request(provider)
+  req <- req_url_path_append(req, "/models")
+  resp <- req_perform(req)
+
+  json <- resp_body_json(resp)
+
+  id <- map_chr(json$data, "[[", "id")
+  created <- as.Date(.POSIXct(map_dbl(json$data, "[[", "created")))
+  owned_by <- map_chr(json$data, "[[", "owned_by")
+
+  df <- data.frame(
+    id = id,
+    created_at = created,
+    owned_by = owned_by
+  )
+  df <- cbind(df, match_prices(provider@name, df$id))
+  df[order(-xtfrm(df$created_at)), ]
+}
 
 # Batched requests -------------------------------------------------------------
 

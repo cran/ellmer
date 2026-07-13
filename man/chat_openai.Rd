@@ -36,7 +36,7 @@ which you can easily edit by calling \code{usethis::edit_r_environ()}.
 
 If you do need additional control, this argument takes a zero-argument function that returns either a string (the API key), or a named list (added as additional headers to every request).}
 
-\item{model}{The model to use for the chat (defaults to "gpt-4.1").
+\item{model}{The model to use for the chat (defaults to "gpt-5.4").
 We regularly update the default, so we strongly recommend explicitly specifying a model for anything other than casual use.
 Use \code{models_openai()} to see all options.}
 
@@ -71,6 +71,8 @@ Note this only affects the \code{chat()} method.}
 A \link{Chat} object.
 }
 \description{
+\ifelse{html}{\figure{support-official.svg}{options: alt='[Official supported provider]'}}{\strong{[Official supported provider]}}
+
 This is the main interface to \href{https://openai.com/}{OpenAI}'s models,
 using the \strong{responses API}. You can use this to access OpenAI's latest
 models and features like image generation and web search. If you need to use
@@ -110,6 +112,7 @@ Other chatbots:
 \code{\link[=chat_openai_compatible]{chat_openai_compatible()}},
 \code{\link[=chat_openrouter]{chat_openrouter()}},
 \code{\link[=chat_perplexity]{chat_perplexity()}},
-\code{\link[=chat_portkey]{chat_portkey()}}
+\code{\link[=chat_portkey]{chat_portkey()}},
+\code{\link[=chat_posit]{chat_posit()}}
 }
 \concept{chatbots}

@@ -516,32 +516,24 @@ experiments suggest is good for LLMs.</p>
 <span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a>)</span></code></pre></div>
 <p>Now we register and use it:</p>
 <div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
-<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-4.1&quot;.</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-5.4&quot;.</span></span>
 <span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">register_tool</span>(get_weather)</span>
 <span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;Give me a weather update for London and Chicago&quot;</span>)</span>
-<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="co">#&gt; Here’s a weather update:</span></span>
-<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co">#&gt; - London: It’s heavily raining, cool, and windy with strong winds.</span></span>
-<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; - Chicago: The weather is overcast, warm, and also has strong winds.</span></span>
-<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co">#&gt; Dress accordingly and stay safe!</span></span></code></pre></div>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="co">#&gt; London: Heavy rain, cool temperatures, and strong wind.  </span></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co">#&gt; Chicago: Overcast, warm temperatures, and strong wind.</span></span></code></pre></div>
 <p>We can print the chat to confirm that the model only performed a
 single tool call:</p>
 <div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>chat</span>
-<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-4.1 turns=4 input=195 output=65 cost=$0.00&gt;</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-5.4 turns=4 input=214 output=50 cost=$0.00&gt;</span></span>
 <span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co">#&gt; ── user ────────────────────────────────────────────────────────────────────────</span></span>
 <span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co">#&gt; Give me a weather update for London and Chicago</span></span>
-<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="co">#&gt; ── assistant [input=67 output=18 cost=$0.00] ───────────────────────────────────</span></span>
-<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#&gt; [tool request (fc_0ab4b61a48aa23bb01692dba49b87c8190ae9678691024472c)]: get_weather(cities = c(&quot;London&quot;, &quot;Chicago&quot;))</span></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="co">#&gt; ── assistant [input=72 output=21 cost=$0.00] ───────────────────────────────────</span></span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#&gt; [tool request (fc_0ef6f7b602ab2d3f016a422b6ffd0c8191a412508c4191a4f2)]: get_weather(cities = c(&quot;London&quot;, &quot;Chicago&quot;))</span></span>
 <span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="co">#&gt; ── user ────────────────────────────────────────────────────────────────────────</span></span>
-<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; [tool result  (fc_0ab4b61a48aa23bb01692dba49b87c8190ae9678691024472c)]: [{&quot;city&quot;:&quot;London&quot;,&quot;raining&quot;:&quot;heavy&quot;,&quot;temperature&quot;:&quot;cool&quot;,&quot;wind&quot;:&quot;strong&quot;},{&quot;city&quot;:&quot;Chicago&quot;,&quot;raining&quot;:&quot;overcast&quot;,&quot;temperature&quot;:&quot;warm&quot;,&quot;wind&quot;:&quot;strong&quot;}]</span></span>
-<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="co">#&gt; ── assistant [input=128 output=47 cost=$0.00] ──────────────────────────────────</span></span>
-<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co">#&gt; Here’s a weather update:</span></span>
-<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a><span class="co">#&gt; - London: It’s heavily raining, cool, and windy with strong winds.</span></span>
-<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a><span class="co">#&gt; - Chicago: The weather is overcast, warm, and also has strong winds.</span></span>
-<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a><span class="co">#&gt; Dress accordingly and stay safe!</span></span></code></pre></div>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; [tool result  (fc_0ef6f7b602ab2d3f016a422b6ffd0c8191a412508c4191a4f2)]: [{&quot;city&quot;:&quot;London&quot;,&quot;raining&quot;:&quot;heavy&quot;,&quot;temperature&quot;:&quot;cool&quot;,&quot;wind&quot;:&quot;strong&quot;},{&quot;city&quot;:&quot;Chicago&quot;,&quot;raining&quot;:&quot;overcast&quot;,&quot;temperature&quot;:&quot;warm&quot;,&quot;wind&quot;:&quot;strong&quot;}]</span></span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="co">#&gt; ── assistant [input=142 output=29 cost=$0.00] ──────────────────────────────────</span></span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co">#&gt; London: Heavy rain, cool temperatures, and strong wind.  </span></span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a><span class="co">#&gt; Chicago: Overcast, warm temperatures, and strong wind.</span></span></code></pre></div>
 </div>
 <div id="image-and-pdf-tool-output" class="section level3">
 <h3>Image and PDF tool output</h3>

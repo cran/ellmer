@@ -51,6 +51,8 @@ to every chat API call.}
 A \link{Chat} object.
 }
 \description{
+\ifelse{html}{\figure{support-community.svg}{options: alt='[Community supported provider]'}}{\strong{[Community supported provider]}}
+
 \href{https://huggingface.co/}{Hugging Face} hosts a variety of open-source
 and proprietary AI models available via their Inference API.
 To use the Hugging Face API, you must have an Access Token, which you can obtain
@@ -91,6 +93,7 @@ Other chatbots:
 \code{\link[=chat_openai_compatible]{chat_openai_compatible()}},
 \code{\link[=chat_openrouter]{chat_openrouter()}},
 \code{\link[=chat_perplexity]{chat_perplexity()}},
-\code{\link[=chat_portkey]{chat_portkey()}}
+\code{\link[=chat_portkey]{chat_portkey()}},
+\code{\link[=chat_posit]{chat_posit()}}
 }
 \concept{chatbots}

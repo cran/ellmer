@@ -7,6 +7,8 @@ NULL
 #' Chat with an AWS bedrock model
 #'
 #' @description
+#' `r support_badge("official")`
+#'
 #' [AWS Bedrock](https://aws.amazon.com/bedrock/) provides a number of
 #' language models, including those from Anthropic's
 #' [Claude](https://aws.amazon.com/bedrock/claude/), using the Bedrock
@@ -44,13 +46,13 @@ NULL
 #'   Set to `"5m"` or `"1h"` to force caching on, or `"none"` to disable it.
 #'
 #'   See details below.
-#' @param model `r param_model("anthropic.claude-sonnet-4-5-20250929-v1:0", "models_aws_bedrock")`.
+#' @param model `r param_model("us.anthropic.claude-sonnet-4-6", "models_aws_bedrock")`.
 #'
 #'   While ellmer provides a default model, there's no guarantee that you'll
 #'   have access to it, so you'll need to specify a model that you can.
 #'   If you're using [cross-region inference](https://aws.amazon.com/blogs/machine-learning/getting-started-with-cross-region-inference-in-amazon-bedrock/),
 #'   you'll need to use the inference profile ID, e.g.
-#'   `model="us.anthropic.claude-sonnet-4-5-20250929-v1:0"`.
+#'   `model="us.anthropic.claude-sonnet-4-6"`.
 #' @param params Common model parameters, usually created by [params()].
 #' @param api_args Named list of arbitrary extra arguments appended to the body
 #'   of every chat API call. Use `params` for common parameters. Model-specific
@@ -121,20 +123,7 @@ models_aws_bedrock <- function(profile = NULL, base_url = NULL) {
     model = "",
     profile = profile,
   )
-  req <- base_request(provider)
-  req <- req_url_path_append(req, "foundation-models")
-
-  resp <- req_perform(req)
-  json <- resp_body_json(resp)
-  models <- json$modelSummaries
-
-  df <- data.frame(
-    id = map_chr(models, "[[", "modelId"),
-    name = map_chr(models, "[[", "modelName"),
-    provider = map_chr(models, "[[", "providerName")
-  )
-  df <- cbind(df, match_prices("AWS/Bedrock", df$id))
-  df
+  models_list(provider)
 }
 
 chat_aws_bedrock_test <- function(
@@ -165,7 +154,7 @@ provider_aws_bedrock <- function(
     base_url <- base_url(credentials$region)
   }
 
-  model <- set_default(model, "anthropic.claude-sonnet-4-5-20250929-v1:0")
+  model <- set_default(model, "us.anthropic.claude-sonnet-4-6")
 
   cache_point <- as_bedrock_cache_point(cache_point, model)
 
@@ -193,6 +182,31 @@ ProviderAWSBedrock <- new_class(
     cache_point = prop_string()
   )
 )
+
+method(models_list, ProviderAWSBedrock) <- function(provider) {
+  # ListFoundationModels uses the control-plane endpoint (bedrock.*) not the
+  # data-plane endpoint (bedrock-runtime.*) used for inference.
+  # https://docs.aws.amazon.com/bedrock/latest/APIReference/API_ListFoundationModels.html
+  provider@base_url <- sub(
+    "bedrock-runtime",
+    "bedrock",
+    provider@base_url,
+    fixed = TRUE
+  )
+
+  req <- base_request(provider)
+  req <- req_url_path_append(req, "foundation-models")
+  resp <- req_perform(req)
+  json <- resp_body_json(resp)
+  models <- json$modelSummaries
+
+  df <- data.frame(
+    id = map_chr(models, "[[", "modelId"),
+    name = map_chr(models, "[[", "modelName"),
+    provider = map_chr(models, "[[", "providerName")
+  )
+  cbind(df, match_prices("AWS/Bedrock", df$id))
+}
 
 method(base_request, ProviderAWSBedrock) <- function(provider) {
   creds <- paws_credentials(provider@profile, provider@cache)
@@ -238,11 +252,10 @@ method(chat_request, ProviderAWSBedrock) <- function(
   type = NULL
 ) {
   req <- base_request(provider)
+  suffix <- if (stream) "converse-stream" else "converse"
   req <- req_url_path_append(
     req,
-    "model",
-    provider@model,
-    if (stream) "converse-stream" else "converse"
+    paste0("model/", curl::curl_escape(provider@model), "/", suffix)
   )
 
   if (length(turns) >= 1 && is_system_turn(turns[[1]])) {
@@ -268,7 +281,6 @@ method(chat_request, ProviderAWSBedrock) <- function(
     )
     tools[[tool_def@name]] <- tool_def
     tool_choice <- list(tool = list(name = tool_def@name))
-    stream <- FALSE
   } else {
     tool_choice <- NULL
   }
@@ -380,7 +392,8 @@ method(stream_merge_chunks, ProviderAWSBedrock) <- function(
     result <- list(
       output = list(
         message = result
-      )
+      ),
+      stopReason = chunk$stopReason
     )
   } else if (chunk$event_type == "metadata") {
     result$usage <- chunk$usage
@@ -398,6 +411,25 @@ method(value_tokens, ProviderAWSBedrock) <- function(provider, json) {
     input = usage$inputTokens %||% 0,
     output = usage$outputTokens %||% 0,
     cached_input = usage$cacheReadInputTokens %||% 0
+  )
+}
+
+# https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_Converse.html
+method(value_finish_reason, ProviderAWSBedrock) <- function(provider, result) {
+  reason <- result$stopReason
+  if (is.null(reason)) {
+    return(NA_character_)
+  }
+  switch(
+    reason,
+    end_turn = "success",
+    tool_use = "tool_use",
+    max_tokens = "max_tokens",
+    model_context_window_exceeded = "context_window",
+    stop_sequence = "stop_sequence",
+    guardrail_intervened = ,
+    content_filtered = "content_filter",
+    I(reason)
   )
 }
 
@@ -436,7 +468,14 @@ method(value_turn, ProviderAWSBedrock) <- function(
 
   tokens <- value_tokens(provider, result)
   cost <- get_token_cost(provider, tokens)
-  AssistantTurn(contents, json = result, tokens = unlist(tokens), cost = cost)
+
+  AssistantTurn(
+    contents,
+    json = result,
+    tokens = unlist(tokens),
+    cost = cost,
+    finish_reason = value_finish_reason(provider, result)
+  )
 }
 
 # ellmer -> Bedrock -------------------------------------------------------------

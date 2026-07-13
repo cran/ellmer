@@ -60,6 +60,8 @@ to every chat API call.}
 A \link{Chat} object.
 }
 \description{
+\ifelse{html}{\figure{support-official.svg}{options: alt='[Official supported provider]'}}{\strong{[Official supported provider]}}
+
 To use \code{chat_ollama()} first download and install
 \href{https://ollama.com}{Ollama}. Then install some models either from the
 command line (e.g. with \verb{ollama pull llama3.1}) or within R using
@@ -67,6 +69,25 @@ command line (e.g. with \verb{ollama pull llama3.1}) or within R using
 \code{ollamar::pull("llama3.1")}).
 
 Built on top of \code{\link[=chat_openai_compatible]{chat_openai_compatible()}}.
+\subsection{Thinking models}{
+
+Some Ollama models (e.g. qwen3) support extended reasoning or "thinking".
+When using these models, thinking content is automatically captured in
+the turn. You can control thinking with
+\code{reasoning_effort}:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{chat <- chat_ollama(
+  model = "qwen3:4b",
+  params = params(reasoning_effort = "none")
+)
+}\if{html}{\out{</div>}}
+
+Which values are supported depends on the model. For example, qwen3 only
+supports \code{"none"} (off) vs the default (on), while gpt-oss supports
+\code{"low"}, \code{"medium"}, and \code{"high"} but ignores \code{"none"}. See
+\url{https://docs.ollama.com/capabilities/thinking} for details.
+}
+
 \subsection{Known limitations}{
 \itemize{
 \item Tool calling is not supported with streaming (i.e. when \code{echo} is
@@ -103,6 +124,7 @@ Other chatbots:
 \code{\link[=chat_openai_compatible]{chat_openai_compatible()}},
 \code{\link[=chat_openrouter]{chat_openrouter()}},
 \code{\link[=chat_perplexity]{chat_perplexity()}},
-\code{\link[=chat_portkey]{chat_portkey()}}
+\code{\link[=chat_portkey]{chat_portkey()}},
+\code{\link[=chat_posit]{chat_posit()}}
 }
 \concept{chatbots}

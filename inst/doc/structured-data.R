@@ -216,9 +216,12 @@ data <- chat$chat_structured(text, type = type_classification)
 data
 
 ## -----------------------------------------------------------------------------
-type_characteristics <- type_object(
-  "All characteristics",
-  .additional_properties = TRUE
+type_characteristics <- type_array(
+  type_object(
+    name = type_string(),
+    value = type_string()
+  ),
+  description = "All characteristics"
 )
 
 text <- "
@@ -226,7 +229,7 @@ text <- "
 "
 
 chat <- chat_anthropic("Extract all characteristics of supplied character")
-str(chat$chat_structured(text, type = type_characteristics))
+chat$chat_structured(text, type = type_characteristics)
 
 ## -----------------------------------------------------------------------------
 type_asset <- type_object(

@@ -52,7 +52,7 @@ models_anthropic(
 
 \item{params}{Common model parameters, usually created by \code{\link[=params]{params()}}.}
 
-\item{model}{The model to use for the chat (defaults to "claude-sonnet-4-5-20250929").
+\item{model}{The model to use for the chat (defaults to "claude-sonnet-4-6").
 We regularly update the default, so we strongly recommend explicitly specifying a model for anything other than casual use.
 Use \code{models_anthropic()} to see all options.}
 
@@ -95,6 +95,8 @@ Note this only affects the \code{chat()} method.}
 A \link{Chat} object.
 }
 \description{
+\ifelse{html}{\figure{support-official.svg}{options: alt='[Official supported provider]'}}{\strong{[Official supported provider]}}
+
 \href{https://www.anthropic.com}{Anthropic} provides a number of chat based models
 under the \href{https://claude.com/product/overview}{Claude} moniker. Note that a
 Claude Pro membership does not give you the ability to call models via the
@@ -165,6 +167,7 @@ Other chatbots:
 \code{\link[=chat_openai_compatible]{chat_openai_compatible()}},
 \code{\link[=chat_openrouter]{chat_openrouter()}},
 \code{\link[=chat_perplexity]{chat_perplexity()}},
-\code{\link[=chat_portkey]{chat_portkey()}}
+\code{\link[=chat_portkey]{chat_portkey()}},
+\code{\link[=chat_posit]{chat_posit()}}
 }
 \concept{chatbots}

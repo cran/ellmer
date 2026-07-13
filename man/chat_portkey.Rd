@@ -66,6 +66,8 @@ to every chat API call.}
 A \link{Chat} object.
 }
 \description{
+\ifelse{html}{\figure{support-community.svg}{options: alt='[Community supported provider]'}}{\strong{[Community supported provider]}}
+
 \href{https://portkey.ai/docs/product/ai-gateway/universal-api}{PortkeyAI}
 provides an interface (AI Gateway) to connect through its Universal API to a
 variety of LLMs providers via a single endpoint.
@@ -94,6 +96,7 @@ Other chatbots:
 \code{\link[=chat_openai]{chat_openai()}},
 \code{\link[=chat_openai_compatible]{chat_openai_compatible()}},
 \code{\link[=chat_openrouter]{chat_openrouter()}},
-\code{\link[=chat_perplexity]{chat_perplexity()}}
+\code{\link[=chat_perplexity]{chat_perplexity()}},
+\code{\link[=chat_posit]{chat_posit()}}
 }
 \concept{chatbots}

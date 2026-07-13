@@ -4,6 +4,8 @@ NULL
 #' Chat with one of the many models hosted on OpenRouter
 #'
 #' @description
+#' `r support_badge("community")`
+#'
 #' Sign up at <https://openrouter.ai>.
 #'
 #' Support for features depends on the underlying model that you use; see
@@ -13,7 +15,7 @@ NULL
 #' @family chatbots
 #' @param api_key `r lifecycle::badge("deprecated")` Use `credentials` instead.
 #' @param credentials `r api_key_param("OPENROUTER_API_KEY")`
-#' @param model `r param_model("gpt-4o")`
+#' @param model `r param_model("gpt-5.4")`
 #' @param params Common model parameters, usually created by [params()].
 #' @inheritParams chat_openai
 #' @inherit chat_openai return
@@ -32,7 +34,7 @@ chat_openrouter <- function(
   echo = c("none", "output", "all"),
   api_headers = character()
 ) {
-  model <- set_default(model, "gpt-4o")
+  model <- set_default(model, "gpt-5.4")
   echo <- check_echo(echo)
 
   credentials <- as_credentials(

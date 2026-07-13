@@ -193,6 +193,17 @@ method(value_tokens, Provider) <- function(provider, json) {
   tokens()
 }
 
+value_finish_reason <- new_generic(
+  "value_finish_reason",
+  "provider",
+  function(provider, result) {
+    S7_dispatch()
+  }
+)
+method(value_finish_reason, Provider) <- function(provider, result) {
+  NA_character_
+}
+
 # Convert to JSON
 as_json <- new_generic(
   "as_json",
@@ -213,6 +224,23 @@ method(as_json, list(Provider, ContentJson)) <- function(provider, x, ...) {
     string <- unclass(jsonlite::toJSON(x@data, auto_unbox = TRUE))
   }
   as_json(provider, ContentText(string), ...)
+}
+
+# Models -------------------------------------------------------------------
+
+models_list <- new_generic("models_list", "provider", function(provider) {
+  S7_dispatch()
+})
+
+method(models_list, Provider) <- function(provider) {
+  cli::cli_abort(
+    "{.arg provider} doesn't support model listing.",
+    class = "not_implemented"
+  )
+}
+
+method(models_list, new_S3_class("Chat")) <- function(provider) {
+  models_list(provider$get_provider())
 }
 
 # Batch AI ---------------------------------------------------------------

@@ -2,6 +2,7 @@
 % Please edit documentation in R/provider-groq.R
 \name{chat_groq}
 \alias{chat_groq}
+\alias{models_groq}
 \title{Chat with a model hosted on Groq}
 \usage{
 chat_groq(
@@ -14,6 +15,12 @@ chat_groq(
   api_args = list(),
   echo = NULL,
   api_headers = character()
+)
+
+models_groq(
+  base_url = "https://api.groq.com/openai/v1",
+  api_key = NULL,
+  credentials = NULL
 )
 }
 \arguments{
@@ -28,7 +35,7 @@ which you can easily edit by calling \code{usethis::edit_r_environ()}.
 
 If you do need additional control, this argument takes a zero-argument function that returns either a string (the API key), or a named list (added as additional headers to every request).}
 
-\item{model}{The model to use for the chat (defaults to "llama-3.1-8b-instant").
+\item{model}{The model to use for the chat (defaults to "openai/gpt-oss-20b").
 We regularly update the default, so we strongly recommend explicitly specifying a model for anything other than casual use.}
 
 \item{params}{Common model parameters, usually created by \code{\link[=params]{params()}}.}
@@ -54,6 +61,8 @@ to every chat API call.}
 A \link{Chat} object.
 }
 \description{
+\ifelse{html}{\figure{support-community.svg}{options: alt='[Community supported provider]'}}{\strong{[Community supported provider]}}
+
 Sign up at \url{https://groq.com}.
 
 Built on top of \code{\link[=chat_openai_compatible]{chat_openai_compatible()}}.
@@ -82,6 +91,7 @@ Other chatbots:
 \code{\link[=chat_openai_compatible]{chat_openai_compatible()}},
 \code{\link[=chat_openrouter]{chat_openrouter()}},
 \code{\link[=chat_perplexity]{chat_perplexity()}},
-\code{\link[=chat_portkey]{chat_portkey()}}
+\code{\link[=chat_portkey]{chat_portkey()}},
+\code{\link[=chat_posit]{chat_posit()}}
 }
 \concept{chatbots}
