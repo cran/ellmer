@@ -54,13 +54,16 @@ chat_deepseek <- function(
   provider <- ProviderDeepSeek(
     name = "DeepSeek",
     base_url = base_url,
-    model = model,
-    params = params,
-    extra_args = api_args,
     credentials = credentials,
     extra_headers = api_headers
   )
-  Chat$new(provider = provider, system_prompt = system_prompt, echo = echo)
+  model <- Model(name = model, params = params, extra_args = api_args)
+  Chat$new(
+    provider = provider,
+    model = model,
+    system_prompt = system_prompt,
+    echo = echo
+  )
 }
 
 ProviderDeepSeek <- new_class(
@@ -79,8 +82,7 @@ method(chat_params, ProviderDeepSeek) <- function(provider, params) {
       stop = "stop_sequences",
       temperature = "temperature",
       top_p = "top_p",
-      logprobs = "log_probs",
-      top_logprobs = "top_k"
+      logprobs = "log_probs"
     )
   )
 }
@@ -147,7 +149,6 @@ models_deepseek <- function(
 
   provider <- ProviderDeepSeek(
     name = "DeepSeek",
-    model = "",
     base_url = base_url,
     credentials = credentials
   )

@@ -9,7 +9,7 @@ NULL
 #' @description
 #' `r support_badge("official")`
 #'
-#' The [Azure OpenAI server](https://azure.microsoft.com/en-us/products/ai-services/openai-service)
+#' [Azure OpenAI in Foundry Models](https://azure.microsoft.com/en-us/products/ai-foundry/models/openai/)
 #' hosts a number of open source models as well as proprietary models
 #' from OpenAI.
 #'
@@ -81,14 +81,17 @@ chat_azure_openai <- function(
   provider <- ProviderAzureOpenAI(
     name = "Azure/OpenAI",
     base_url = paste0(endpoint, "/openai/deployments/", model),
-    model = model,
-    params = params,
     api_version = api_version,
     credentials = credentials,
-    extra_args = api_args,
     extra_headers = api_headers
   )
-  Chat$new(provider = provider, system_prompt = system_prompt, echo = echo)
+  model <- Model(name = model, params = params, extra_args = api_args)
+  Chat$new(
+    provider = provider,
+    model = model,
+    system_prompt = system_prompt,
+    echo = echo
+  )
 }
 
 chat_azure_openai_test <- function(

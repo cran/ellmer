@@ -1,5 +1,6 @@
 #' @include provider-claude.R
 #' @include provider-openai-compatible.R
+#' @include files.R
 NULL
 
 #' Chat with a model hosted by Posit AI
@@ -23,7 +24,7 @@ NULL
 #'   credentials to use in place of the default OAuth device flow, either as a
 #'   named list of headers or as a function that modifies the request. You
 #'   should not usually need to set this.
-#' @param model `r param_model("claude-sonnet-4-6", "posit")`
+#' @param model `r param_model("claude-sonnet-5", "posit")`
 #' @param cache How long to cache inputs? Defaults to "5m" (five minutes).
 #'   Set to "none" to disable caching or "1h" to cache for one hour. This is
 #'   only supported for Claude models and is ignored for other models.
@@ -49,7 +50,7 @@ chat_posit <- function(
   echo = NULL
 ) {
   check_string(base_url)
-  model <- set_default(model, "claude-sonnet-4-6")
+  model <- set_default(model, "claude-sonnet-5")
   cache <- arg_match(cache)
   echo <- check_echo(echo)
 
@@ -59,13 +60,12 @@ chat_posit <- function(
     credentials = credentials
   )
 
+  params <- params %||% params()
+
   if (is_claude_model(model)) {
     provider <- ProviderPositAnthropic(
       name = "Posit",
       base_url = paste0(base_url, "/anthropic/v1"),
-      model = model,
-      params = params %||% params(),
-      extra_args = api_args,
       extra_headers = api_headers,
       credentials = credentials,
       cache = cache
@@ -74,15 +74,18 @@ chat_posit <- function(
     provider <- ProviderPositOpenAI(
       name = "Posit",
       base_url = paste0(base_url, "/openai/v1"),
-      model = model,
-      params = params %||% params(),
-      extra_args = api_args,
       extra_headers = api_headers,
       credentials = credentials
     )
   }
+  model <- Model(name = model, params = params, extra_args = api_args)
 
-  Chat$new(provider = provider, system_prompt = system_prompt, echo = echo)
+  Chat$new(
+    provider = provider,
+    model = model,
+    system_prompt = system_prompt,
+    echo = echo
+  )
 }
 
 #' @export
@@ -131,6 +134,35 @@ method(base_request, ProviderPositAnthropic) <- function(provider) {
 method(base_request, ProviderPositOpenAI) <- function(provider) {
   req <- base_request(super(provider, ProviderOpenAICompatible))
   req_error(req, body = posit_error_body)
+}
+
+# The Posit gateway doesn't serve Anthropic's beta Files API, so opt back out
+# of the file management otherwise inherited from ProviderAnthropic.
+method(file_upload, ProviderPositAnthropic) <- function(
+  provider,
+  path,
+  mime_type = NULL,
+  expires_in_h = 48,
+  ...
+) {
+  no_file_support(provider)
+}
+method(file_list, ProviderPositAnthropic) <- function(provider, ...) {
+  no_file_support(provider)
+}
+method(file_get, ProviderPositAnthropic) <- function(provider, id, ...) {
+  no_file_support(provider)
+}
+method(file_download, ProviderPositAnthropic) <- function(
+  provider,
+  id,
+  path,
+  ...
+) {
+  no_file_support(provider)
+}
+method(file_delete, ProviderPositAnthropic) <- function(provider, id, ...) {
+  no_file_support(provider)
 }
 
 method(models_list, ProviderPositAnthropic) <- function(provider) {

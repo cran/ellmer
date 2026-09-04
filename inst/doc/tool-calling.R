@@ -64,12 +64,13 @@ get_weather <- tool(
     temperature <- c(London = "cool", Houston = "hot", Chicago = "warm")
     wind <- c(London = "strong", Houston = "weak", Chicago = "strong")
 
-    data.frame(
+    df <- data.frame(
       city = cities,
       raining = unname(raining[cities]),
       temperature = unname(temperature[cities]),
       wind = unname(wind[cities])
     )
+    jsonlite::toJSON(df, auto_unbox = TRUE)
   },
   name = "get_weather",
   description = "
@@ -126,4 +127,84 @@ chat
 # #>
 # #> Overall, the design communicates clarity, ease of use, and a focus on
 # #> modern data science tools.
+
+## -----------------------------------------------------------------------------
+# report_tool <- tool(
+#   function(query) {
+#     ctx <- tool_context()
+#     cli::cli_alert_info("Running report for request {ctx$request@id}")
+#     run_report(query)
+#   },
+#   description = "Run a report for the given query.",
+#   arguments = list(query = type_string("The report query."))
+# )
+
+## -----------------------------------------------------------------------------
+# my_async_tool <- tool(
+#   coro::async(function(query) {
+#     ctx <- tool_context()          # capture before any await()
+#     result <- await(run_report_async(query))
+#     cli::cli_alert_info("Finished request {ctx$request@id}")
+#     result
+#   }),
+#   description = "Run a report asynchronously.",
+#   arguments = list(query = type_string("The report query."))
+# )
+
+## -----------------------------------------------------------------------------
+# Assistant <- R6::R6Class(
+#   "Assistant",
+#   public = list(
+#     initialize = function(user_email) {
+#       private$user_email <- user_email
+#     },
+# 
+#     # Return the ellmer tools, each wrapping a bound method. `tool()` can't
+#     # infer a name from `self$method`, so we pass `name` explicitly.
+#     tools = function() {
+#       list(
+#         tool(
+#           self$add_note,
+#           name = "add_note",
+#           description = "Save a note for the current user.",
+#           arguments = list(text = type_string("The note to save."))
+#         ),
+#         tool(
+#           self$list_notes,
+#           name = "list_notes",
+#           description = "List the current user's saved notes."
+#         )
+#       )
+#     },
+# 
+#     add_note = function(text) {
+#       private$notes <- c(private$notes, text)
+#       sprintf("Saved. You now have %d note(s).", length(private$notes))
+#     },
+# 
+#     list_notes = function() {
+#       if (length(private$notes) == 0) {
+#         return("No notes yet.")
+#       }
+#       private$notes
+#     }
+#   ),
+#   private = list(
+#     user_email = NULL,
+#     notes = character()
+#   )
+# )
+
+## -----------------------------------------------------------------------------
+# assistant <- Assistant$new(user_email = "hadley@posit.co")
+# 
+# chat <- chat_openai()
+# chat$register_tools(assistant$tools())
+# 
+# chat$chat("Remember that I need to buy milk.")
+# chat$chat("What do I need to do?")
+# 
+# # Inspect the state directly; this never passed through the model
+# assistant$list_notes()
+# #> [1] "buy milk"
 

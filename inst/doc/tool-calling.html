@@ -385,7 +385,7 @@ tool. Chat models generally do not know the current time, which makes
 questions like these impossible.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>(<span class="at">model =</span> <span class="st">&quot;gpt-4o&quot;</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;How long ago did Neil Armstrong touch down on the moon?&quot;</span>)</span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt; Neil Armstrong landed on the moon on July 20, 1969. As of now in 2023, that was</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt; Neil Armstrong touched down on the moon on July 20, 1969. As of 2023, that was </span></span>
 <span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; 54 years ago.</span></span></code></pre></div>
 <p>Since the model doesn’t know what day it is, the result is
 incorrect.</p>
@@ -436,27 +436,27 @@ with <code>$register_tool()</code>:</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">register_tool</span>(get_current_time)</span></code></pre></div>
 <p>That’s all we need to do! Let’s retry our query:</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;How long ago did Neil Armstrong touch down on the moon?&quot;</span>)</span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt; Neil Armstrong landed on the moon on July 20, 1969. As of June 25, 2025, that </span></span>
-<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt; was 55 years ago.</span></span></code></pre></div>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt; Neil Armstrong touched down on the moon on July 20, 1969. As of June 25, 2025, </span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt; that was almost 56 years ago.</span></span></code></pre></div>
 <p>That’s correct! Without any further guidance, the chat model decided
 to call our tool function and successfully used its result in
 formulating its response.</p>
 <p>If we print the chat we can see where the model decided to use the
 tool:</p>
 <div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>chat</span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-4o turns=6 input=356 output=81 cost=$0.00&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-4o turns=6 input=286 output=82 cost=$0.00&gt;</span></span>
 <span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt; ── user ────────────────────────────────────────────────────────────────────────</span></span>
 <span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; How long ago did Neil Armstrong touch down on the moon?</span></span>
-<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt; ── assistant [input=19 output=31 cost=$0.00] ───────────────────────────────────</span></span>
-<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; Neil Armstrong landed on the moon on July 20, 1969. As of now in 2023, that was 54 years ago.</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt; ── assistant [input=19 output=30 cost=$0.00] ───────────────────────────────────</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; Neil Armstrong touched down on the moon on July 20, 1969. As of 2023, that was 54 years ago.</span></span>
 <span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; ── user ────────────────────────────────────────────────────────────────────────</span></span>
 <span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; How long ago did Neil Armstrong touch down on the moon?</span></span>
-<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt; ── assistant [input=151 output=16 cost=$0.00] ──────────────────────────────────</span></span>
-<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt; [tool request (fc_07fd060fbaac49e001692dba44f2fc8197a1cfd2d677f98e67)]: get_current_time(tz = &quot;UTC&quot;)</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt; ── assistant [input=116 output=16 cost=$0.00] ──────────────────────────────────</span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt; [tool request (fc_0f19f871ea49202b016a6fc5b589bc81968b2a20c52239f613)]: get_current_time(tz = &quot;UTC&quot;)</span></span>
 <span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt; ── user ────────────────────────────────────────────────────────────────────────</span></span>
-<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt; [tool result  (fc_07fd060fbaac49e001692dba44f2fc8197a1cfd2d677f98e67)]: 2025-06-25 16:53:23 UTC</span></span>
-<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt; ── assistant [input=186 output=34 cost=$0.00] ──────────────────────────────────</span></span>
-<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt; Neil Armstrong landed on the moon on July 20, 1969. As of June 25, 2025, that was 55 years ago.</span></span></code></pre></div>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt; [tool result  (fc_0f19f871ea49202b016a6fc5b589bc81968b2a20c52239f613)]: 2025-06-25 16:53:23 UTC</span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt; ── assistant [input=151 output=36 cost=$0.00] ──────────────────────────────────</span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt; Neil Armstrong touched down on the moon on July 20, 1969. As of June 25, 2025, that was almost 56 years ago.</span></span></code></pre></div>
 <p>(Full disclosure: I originally tried this example with the default
 model of <code>gpt-4o-mini</code> and it got the tool calling right but
 the date math wrong, hence the explicit
@@ -480,60 +480,65 @@ possible.</p>
 <code>type_object()</code>. We recommend keeping them as simple as
 possible, focusing on basic scalar types as much as you can.</p>
 <p>The output of the tool call will be interpreted by the LLM, just as
-if you had typed that information into the data. That means you’ll
-generally want to produce text or other atomic vectors. For more complex
-data, ellmer will automatically serialize the result to JSON, which LLMs
-generally seem to be good at understanding. If you must have more direct
-control of the structure of the JSON that’s returned, you can return a
-JSON-serializable value wrapped in <code>I()</code>, which ellmer will
-leave alone until the entire request is JSON-serialized.</p>
+if you had typed that information into the chat. Tool functions should
+return a string, an atomic vector, a JSON string (e.g. from
+<code>jsonlite::toJSON()</code>), or a <code>Content</code> object.</p>
+<p>For complex data like data frames or lists, use
+<code>jsonlite::toJSON()</code> to convert them explicitly before
+returning. Returning JSON doesn’t let the model do anything extra with
+the data; unlike a program, it can’t parse the JSON and compute with the
+values. If the answer requires exact computation, compute it in the
+tool; the model’s job is only to read the result.</p>
 <p>To show off these ideas, here’s a slightly more complicated example
 simulating a weather API that returns data for multiple cities at once.
-The <code>get_weather()</code> function returns a data frame that ellmer
-will automatically convert into JSON in row-major format, which our
-experiments suggest is good for LLMs.</p>
+The <code>get_weather()</code> function returns a data frame converted
+to JSON in row-major format, which our experiments suggest is good for
+LLMs.</p>
 <div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>get_weather <span class="ot">&lt;-</span> <span class="fu">tool</span>(</span>
 <span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  <span class="cf">function</span>(cities) {</span>
 <span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>    raining <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">London =</span> <span class="st">&quot;heavy&quot;</span>, <span class="at">Houston =</span> <span class="st">&quot;none&quot;</span>, <span class="at">Chicago =</span> <span class="st">&quot;overcast&quot;</span>)</span>
 <span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>    temperature <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">London =</span> <span class="st">&quot;cool&quot;</span>, <span class="at">Houston =</span> <span class="st">&quot;hot&quot;</span>, <span class="at">Chicago =</span> <span class="st">&quot;warm&quot;</span>)</span>
 <span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>    wind <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">London =</span> <span class="st">&quot;strong&quot;</span>, <span class="at">Houston =</span> <span class="st">&quot;weak&quot;</span>, <span class="at">Chicago =</span> <span class="st">&quot;strong&quot;</span>)</span>
 <span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a></span>
-<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>    <span class="fu">data.frame</span>(</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>    df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
 <span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>      <span class="at">city =</span> cities,</span>
 <span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>      <span class="at">raining =</span> <span class="fu">unname</span>(raining[cities]),</span>
 <span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>      <span class="at">temperature =</span> <span class="fu">unname</span>(temperature[cities]),</span>
 <span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>      <span class="at">wind =</span> <span class="fu">unname</span>(wind[cities])</span>
 <span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a>    )</span>
-<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a>  },</span>
-<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">&quot;get_weather&quot;</span>,</span>
-<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a>  <span class="at">description =</span> <span class="st">&quot;</span></span>
-<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="st">    Report on weather conditions in multiple cities. For efficiency, request</span></span>
-<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="st">    all weather updates using a single tool call</span></span>
-<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="st">  &quot;</span>,</span>
-<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a>  <span class="at">arguments =</span> <span class="fu">list</span>(</span>
-<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a>    <span class="at">cities =</span> <span class="fu">type_array</span>(<span class="fu">type_string</span>(), <span class="st">&quot;City names&quot;</span>)</span>
-<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a>  )</span>
-<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a>)</span></code></pre></div>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a>    jsonlite<span class="sc">::</span><span class="fu">toJSON</span>(df, <span class="at">auto_unbox =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a>  },</span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">&quot;get_weather&quot;</span>,</span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a>  <span class="at">description =</span> <span class="st">&quot;</span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="st">    Report on weather conditions in multiple cities. For efficiency, request</span></span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="st">    all weather updates using a single tool call</span></span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="st">  &quot;</span>,</span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a>  <span class="at">arguments =</span> <span class="fu">list</span>(</span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a>    <span class="at">cities =</span> <span class="fu">type_array</span>(<span class="fu">type_string</span>(), <span class="st">&quot;City names&quot;</span>)</span>
+<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a>  )</span>
+<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a>)</span></code></pre></div>
 <p>Now we register and use it:</p>
 <div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
-<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-5.4&quot;.</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-5.6-terra&quot;.</span></span>
 <span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">register_tool</span>(get_weather)</span>
 <span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;Give me a weather update for London and Chicago&quot;</span>)</span>
-<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="co">#&gt; London: Heavy rain, cool temperatures, and strong wind.  </span></span>
-<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co">#&gt; Chicago: Overcast, warm temperatures, and strong wind.</span></span></code></pre></div>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="co">#&gt; - **London:** Heavy rain, cool temperatures, and strong winds. Bring waterproof</span></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co">#&gt; layers and expect difficult conditions outdoors.</span></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co">#&gt; - **Chicago:** Overcast, warm, and windy. No rain reported, but gusty </span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; conditions are likely.</span></span></code></pre></div>
 <p>We can print the chat to confirm that the model only performed a
 single tool call:</p>
 <div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>chat</span>
-<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-5.4 turns=4 input=214 output=50 cost=$0.00&gt;</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="co">#&gt; &lt;Chat OpenAI/gpt-5.6-terra turns=4 input=214 output=71 cost=$0.00&gt;</span></span>
 <span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co">#&gt; ── user ────────────────────────────────────────────────────────────────────────</span></span>
 <span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co">#&gt; Give me a weather update for London and Chicago</span></span>
 <span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="co">#&gt; ── assistant [input=72 output=21 cost=$0.00] ───────────────────────────────────</span></span>
-<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#&gt; [tool request (fc_0ef6f7b602ab2d3f016a422b6ffd0c8191a412508c4191a4f2)]: get_weather(cities = c(&quot;London&quot;, &quot;Chicago&quot;))</span></span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#&gt; [tool request (fc_067a2e7696ea5827016a6fc5b7e76c8196894bff386923330d)]: get_weather(cities = c(&quot;London&quot;, &quot;Chicago&quot;))</span></span>
 <span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="co">#&gt; ── user ────────────────────────────────────────────────────────────────────────</span></span>
-<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; [tool result  (fc_0ef6f7b602ab2d3f016a422b6ffd0c8191a412508c4191a4f2)]: [{&quot;city&quot;:&quot;London&quot;,&quot;raining&quot;:&quot;heavy&quot;,&quot;temperature&quot;:&quot;cool&quot;,&quot;wind&quot;:&quot;strong&quot;},{&quot;city&quot;:&quot;Chicago&quot;,&quot;raining&quot;:&quot;overcast&quot;,&quot;temperature&quot;:&quot;warm&quot;,&quot;wind&quot;:&quot;strong&quot;}]</span></span>
-<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="co">#&gt; ── assistant [input=142 output=29 cost=$0.00] ──────────────────────────────────</span></span>
-<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co">#&gt; London: Heavy rain, cool temperatures, and strong wind.  </span></span>
-<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a><span class="co">#&gt; Chicago: Overcast, warm temperatures, and strong wind.</span></span></code></pre></div>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; [tool result  (fc_067a2e7696ea5827016a6fc5b7e76c8196894bff386923330d)]: [{&quot;city&quot;:&quot;London&quot;,&quot;raining&quot;:&quot;heavy&quot;,&quot;temperature&quot;:&quot;cool&quot;,&quot;wind&quot;:&quot;strong&quot;},{&quot;city&quot;:&quot;Chicago&quot;,&quot;raining&quot;:&quot;overcast&quot;,&quot;temperature&quot;:&quot;warm&quot;,&quot;wind&quot;:&quot;strong&quot;}]</span></span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="co">#&gt; ── assistant [input=142 output=50 cost=$0.00] ──────────────────────────────────</span></span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co">#&gt; - **London:** Heavy rain, cool temperatures, and strong winds. Bring waterproof layers and expect difficult conditions outdoors.</span></span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a><span class="co">#&gt; - **Chicago:** Overcast, warm, and windy. No rain reported, but gusty conditions are likely.</span></span></code></pre></div>
 </div>
 <div id="image-and-pdf-tool-output" class="section level3">
 <h3>Image and PDF tool output</h3>
@@ -578,6 +583,119 @@ function. For example, here’s a simple tool to screenshot a website:</p>
 <span id="cb13-20"><a href="#cb13-20" tabindex="-1"></a><span class="co">#&gt;</span></span>
 <span id="cb13-21"><a href="#cb13-21" tabindex="-1"></a><span class="co">#&gt; Overall, the design communicates clarity, ease of use, and a focus on</span></span>
 <span id="cb13-22"><a href="#cb13-22" tabindex="-1"></a><span class="co">#&gt; modern data science tools.</span></span></code></pre></div>
+</div>
+<div id="tool-context" class="section level3">
+<h3>Tool context</h3>
+<p>A tool sometimes needs to know a little about the call it’s part of,
+such as the tool request that triggered it or the conversation so far,
+without that information being part of its arguments. Inside a tool
+body, <code>tool_context()</code> returns a read-only context object
+with two fields:</p>
+<ul>
+<li><code>$request</code>: the <code>ContentToolRequest</code> for this
+call, including <code>@id</code>, <code>@name</code>, and
+<code>@arguments</code>.</li>
+<li><code>$turns</code>: a snapshot of the conversation history up to
+and including the assistant turn that issued this request (a list of
+<code>Turn</code> objects).</li>
+</ul>
+<p>This is handy for logging or correlating tool calls with the request
+that produced them:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>report_tool <span class="ot">&lt;-</span> <span class="fu">tool</span>(</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>  <span class="cf">function</span>(query) {</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>    ctx <span class="ot">&lt;-</span> <span class="fu">tool_context</span>()</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>    cli<span class="sc">::</span><span class="fu">cli_alert_info</span>(<span class="st">&quot;Running report for request {ctx$request@id}&quot;</span>)</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>    <span class="fu">run_report</span>(query)</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>  },</span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a>  <span class="at">description =</span> <span class="st">&quot;Run a report for the given query.&quot;</span>,</span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a>  <span class="at">arguments =</span> <span class="fu">list</span>(<span class="at">query =</span> <span class="fu">type_string</span>(<span class="st">&quot;The report query.&quot;</span>))</span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a>)</span></code></pre></div>
+<p>In an async tool, <code>tool_context()</code> is only valid during
+the synchronous prefix of the function, in other words before the first
+<code>await()</code>. Capture it at the top of your tool body:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a>my_async_tool <span class="ot">&lt;-</span> <span class="fu">tool</span>(</span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>  coro<span class="sc">::</span><span class="fu">async</span>(<span class="cf">function</span>(query) {</span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a>    ctx <span class="ot">&lt;-</span> <span class="fu">tool_context</span>()          <span class="co"># capture before any await()</span></span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a>    result <span class="ot">&lt;-</span> <span class="fu">await</span>(<span class="fu">run_report_async</span>(query))</span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a>    cli<span class="sc">::</span><span class="fu">cli_alert_info</span>(<span class="st">&quot;Finished request {ctx$request@id}&quot;</span>)</span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>    result</span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a>  }),</span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a>  <span class="at">description =</span> <span class="st">&quot;Run a report asynchronously.&quot;</span>,</span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a>  <span class="at">arguments =</span> <span class="fu">list</span>(<span class="at">query =</span> <span class="fu">type_string</span>(<span class="st">&quot;The report query.&quot;</span>))</span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a>)</span></code></pre></div>
+<p><code>tool_context()</code> errors with a clear message if called
+after an <code>await()</code> or outside a tool invocation. Built-in
+provider tools (such as <code>claude_tool_web_search()</code>) run
+provider-side and do not support <code>tool_context()</code>; MCP tools
+do.</p>
+</div>
+<div id="sharing-state-across-tools" class="section level3">
+<h3>Sharing state across tools</h3>
+<p>Related tools may need to share private state that the model should
+never see, such as a database connection, an authenticated user, or a
+running tally. A clean way to organise this is to bundle the tools
+together as methods of an R6 class, with the shared state living in the
+object’s fields. Each tool reads and writes that state through
+<code>self</code>, and a <code>$tools()</code> method returns the ellmer
+tools.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a>Assistant <span class="ot">&lt;-</span> R6<span class="sc">::</span><span class="fu">R6Class</span>(</span>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a>  <span class="st">&quot;Assistant&quot;</span>,</span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a>  <span class="at">public =</span> <span class="fu">list</span>(</span>
+<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a>    <span class="at">initialize =</span> <span class="cf">function</span>(user_email) {</span>
+<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a>      private<span class="sc">$</span>user_email <span class="ot">&lt;-</span> user_email</span>
+<span id="cb16-6"><a href="#cb16-6" tabindex="-1"></a>    },</span>
+<span id="cb16-7"><a href="#cb16-7" tabindex="-1"></a></span>
+<span id="cb16-8"><a href="#cb16-8" tabindex="-1"></a>    <span class="co"># Return the ellmer tools, each wrapping a bound method. `tool()` can&#39;t</span></span>
+<span id="cb16-9"><a href="#cb16-9" tabindex="-1"></a>    <span class="co"># infer a name from `self$method`, so we pass `name` explicitly.</span></span>
+<span id="cb16-10"><a href="#cb16-10" tabindex="-1"></a>    <span class="at">tools =</span> <span class="cf">function</span>() {</span>
+<span id="cb16-11"><a href="#cb16-11" tabindex="-1"></a>      <span class="fu">list</span>(</span>
+<span id="cb16-12"><a href="#cb16-12" tabindex="-1"></a>        <span class="fu">tool</span>(</span>
+<span id="cb16-13"><a href="#cb16-13" tabindex="-1"></a>          self<span class="sc">$</span>add_note,</span>
+<span id="cb16-14"><a href="#cb16-14" tabindex="-1"></a>          <span class="at">name =</span> <span class="st">&quot;add_note&quot;</span>,</span>
+<span id="cb16-15"><a href="#cb16-15" tabindex="-1"></a>          <span class="at">description =</span> <span class="st">&quot;Save a note for the current user.&quot;</span>,</span>
+<span id="cb16-16"><a href="#cb16-16" tabindex="-1"></a>          <span class="at">arguments =</span> <span class="fu">list</span>(<span class="at">text =</span> <span class="fu">type_string</span>(<span class="st">&quot;The note to save.&quot;</span>))</span>
+<span id="cb16-17"><a href="#cb16-17" tabindex="-1"></a>        ),</span>
+<span id="cb16-18"><a href="#cb16-18" tabindex="-1"></a>        <span class="fu">tool</span>(</span>
+<span id="cb16-19"><a href="#cb16-19" tabindex="-1"></a>          self<span class="sc">$</span>list_notes,</span>
+<span id="cb16-20"><a href="#cb16-20" tabindex="-1"></a>          <span class="at">name =</span> <span class="st">&quot;list_notes&quot;</span>,</span>
+<span id="cb16-21"><a href="#cb16-21" tabindex="-1"></a>          <span class="at">description =</span> <span class="st">&quot;List the current user&#39;s saved notes.&quot;</span></span>
+<span id="cb16-22"><a href="#cb16-22" tabindex="-1"></a>        )</span>
+<span id="cb16-23"><a href="#cb16-23" tabindex="-1"></a>      )</span>
+<span id="cb16-24"><a href="#cb16-24" tabindex="-1"></a>    },</span>
+<span id="cb16-25"><a href="#cb16-25" tabindex="-1"></a></span>
+<span id="cb16-26"><a href="#cb16-26" tabindex="-1"></a>    <span class="at">add_note =</span> <span class="cf">function</span>(text) {</span>
+<span id="cb16-27"><a href="#cb16-27" tabindex="-1"></a>      private<span class="sc">$</span>notes <span class="ot">&lt;-</span> <span class="fu">c</span>(private<span class="sc">$</span>notes, text)</span>
+<span id="cb16-28"><a href="#cb16-28" tabindex="-1"></a>      <span class="fu">sprintf</span>(<span class="st">&quot;Saved. You now have %d note(s).&quot;</span>, <span class="fu">length</span>(private<span class="sc">$</span>notes))</span>
+<span id="cb16-29"><a href="#cb16-29" tabindex="-1"></a>    },</span>
+<span id="cb16-30"><a href="#cb16-30" tabindex="-1"></a></span>
+<span id="cb16-31"><a href="#cb16-31" tabindex="-1"></a>    <span class="at">list_notes =</span> <span class="cf">function</span>() {</span>
+<span id="cb16-32"><a href="#cb16-32" tabindex="-1"></a>      <span class="cf">if</span> (<span class="fu">length</span>(private<span class="sc">$</span>notes) <span class="sc">==</span> <span class="dv">0</span>) {</span>
+<span id="cb16-33"><a href="#cb16-33" tabindex="-1"></a>        <span class="fu">return</span>(<span class="st">&quot;No notes yet.&quot;</span>)</span>
+<span id="cb16-34"><a href="#cb16-34" tabindex="-1"></a>      }</span>
+<span id="cb16-35"><a href="#cb16-35" tabindex="-1"></a>      private<span class="sc">$</span>notes</span>
+<span id="cb16-36"><a href="#cb16-36" tabindex="-1"></a>    }</span>
+<span id="cb16-37"><a href="#cb16-37" tabindex="-1"></a>  ),</span>
+<span id="cb16-38"><a href="#cb16-38" tabindex="-1"></a>  <span class="at">private =</span> <span class="fu">list</span>(</span>
+<span id="cb16-39"><a href="#cb16-39" tabindex="-1"></a>    <span class="at">user_email =</span> <span class="cn">NULL</span>,</span>
+<span id="cb16-40"><a href="#cb16-40" tabindex="-1"></a>    <span class="at">notes =</span> <span class="fu">character</span>()</span>
+<span id="cb16-41"><a href="#cb16-41" tabindex="-1"></a>  )</span>
+<span id="cb16-42"><a href="#cb16-42" tabindex="-1"></a>)</span></code></pre></div>
+<p>Create the object once, register its tools, and the state accumulates
+across turns and across <code>$chat()</code> calls, all without exposing
+<code>user_email</code> or the raw notes to the model:</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a>assistant <span class="ot">&lt;-</span> Assistant<span class="sc">$</span><span class="fu">new</span>(<span class="at">user_email =</span> <span class="st">&quot;hadley@posit.co&quot;</span>)</span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a></span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>()</span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">register_tools</span>(assistant<span class="sc">$</span><span class="fu">tools</span>())</span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a></span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;Remember that I need to buy milk.&quot;</span>)</span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(<span class="st">&quot;What do I need to do?&quot;</span>)</span>
+<span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a></span>
+<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a><span class="co"># Inspect the state directly; this never passed through the model</span></span>
+<span id="cb17-10"><a href="#cb17-10" tabindex="-1"></a>assistant<span class="sc">$</span><span class="fu">list_notes</span>()</span>
+<span id="cb17-11"><a href="#cb17-11" tabindex="-1"></a><span class="co">#&gt; [1] &quot;buy milk&quot;</span></span></code></pre></div>
+<p>Because the state lives in the object rather than in ellmer, you stay
+in control of how it’s created, inspected, and persisted.</p>
 </div>
 </div>
 

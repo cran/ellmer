@@ -12,7 +12,7 @@
     Code
       . <- chat_google_gemini()
     Message
-      Using model = "gemini-3.5-flash".
+      Using model = "gemini-3.7-flash".
 
 # can use images
 
@@ -21,4 +21,13 @@
     Condition
       Error in `method(as_json, list(ellmer::ProviderGoogleGemini, ellmer::ContentImageRemote))`:
       ! Gemini doesn't support remote images
+
+# binary documents are rejected
+
+    Code
+      as_json(provider, xls)
+    Condition
+      Error in `method(as_json, list(ellmer::ProviderGoogleGemini, ellmer::ContentDocument))`:
+      ! Gemini doesn't support "application/vnd.ms-excel" documents.
+      i Convert the document to plain text or PDF first.
 

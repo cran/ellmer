@@ -27,9 +27,11 @@ local({
 
   local_chat_otel_span <<- function(
     provider,
+    model,
     turns = NULL,
     system_prompt = NULL,
     parent = NULL,
+    conversation_id = NULL,
     local_envir = parent.frame()
   ) {
     if (!otel_is_tracing) {
@@ -37,16 +39,20 @@ local({
     }
     chat_span <-
       otel::start_span(
-        sprintf("chat %s", provider@model),
+        sprintf("chat %s", model@name),
         options = list(
           parent = parent,
           kind = "client"
         ),
-        attributes = list(
+        # Per the GenAI semantic conventions, gen_ai.conversation.id is only
+        # set when the caller has a conversation identifier readily available;
+        # never invent a fallback value.
+        attributes = compact(list(
           "gen_ai.operation.name" = "chat",
           "gen_ai.provider.name" = tolower(provider@name),
-          "gen_ai.request.model" = provider@model
-        ),
+          "gen_ai.request.model" = model@name,
+          "gen_ai.conversation.id" = conversation_id
+        )),
         tracer = otel_tracer
       )
 
@@ -63,7 +69,7 @@ local({
       if (length(turns)) {
         # Tool result values are typed `class_any`, so tools can return objects
         # (environments, R6, external pointers) that `jsonlite::toJSON` rejects.
-        # Skip emission rather than break the chat — the provider's tool_string
+        # Skip emission rather than break the chat; the provider's tool_string
         # path will surface a descriptive error.
         tryCatch(
           {
@@ -122,7 +128,9 @@ local({
   # local_otel_span_agent
   local_agent_otel_span <<- function(
     provider,
+    model,
     activate = TRUE,
+    conversation_id = NULL,
     local_envir = parent.frame()
   ) {
     if (!otel_is_tracing) {
@@ -140,11 +148,12 @@ local({
       otel::start_span(
         "invoke_agent",
         options = list(kind = "client"),
-        attributes = list(
+        attributes = compact(list(
           "gen_ai.operation.name" = "invoke_agent",
           "gen_ai.provider.name" = tolower(provider@name),
-          "gen_ai.request.model" = provider@model
-        ),
+          "gen_ai.request.model" = model@name,
+          "gen_ai.conversation.id" = conversation_id
+        )),
         tracer = otel_tracer
       )
 
@@ -198,7 +207,7 @@ record_chat_otel_span_status <- function(span, provider, result) {
   span$set_status("ok")
 }
 
-# Convert a single Content into a GenAI semconv "part" — a named list emitted
+# Convert a single Content into a GenAI semconv "part", a named list emitted
 # as one entry of a ChatMessage's `parts` array. New content classes fall
 # through to the default method, which emits a schema-valid `generic` part.
 as_otel_part <- new_generic("as_otel_part", "content")
@@ -243,19 +252,13 @@ tool_otel_response <- function(content) {
 }
 
 # Produce a GenAI semconv ChatMessage from a Turn. Tool-result UserTurns get
-# role "tool" so consumers can filter them out of normal user input — matching
+# role "tool" so consumers can filter them out of normal user input, matching
 # Python's GenAI instrumentations.
 as_otel_message <- function(turn) {
   list(
     role = if (is_tool_result_turn(turn)) "tool" else turn@role,
     parts = lapply(turn@contents, as_otel_part)
   )
-}
-
-is_tool_result_turn <- function(turn) {
-  S7_inherits(turn, UserTurn) &&
-    length(turn@contents) > 0 &&
-    all(map_lgl(turn@contents, S7_inherits, ContentToolResult))
 }
 
 otel_chat_input <- function(private, user_turn) {

@@ -55,11 +55,30 @@ test_that("can use pdfs", {
   test_pdf_local(chat_fun)
 })
 
+# Can't round-trip test against the real API: OpenAI's Chat Completions
+# endpoint only accepts PDFs in file parts. The MIME type is passed through
+# for the benefit of other OpenAI-compatible backends.
+test_that("documents are serialized as file parts", {
+  stub <- ProviderOpenAICompatible(name = "", base_url = "")
+
+  doc <- ContentDocument("text/csv", "YQ==", "data.csv")
+  expect_equal(
+    as_json(stub, doc),
+    list(
+      type = "file",
+      file = list(
+        filename = "data.csv",
+        file_data = "data:text/csv;base64,YQ=="
+      )
+    )
+  )
+})
+
 test_that("can match prices for some common models", {
   provider <- chat_openai_compatible_test()$get_provider()
 
-  expect_true(has_cost(provider, "gpt-4.1"))
-  expect_true(has_cost(provider, "gpt-4.1-2025-04-14"))
+  expect_true(has_cost(provider@name, "gpt-4.1"))
+  expect_true(has_cost(provider@name, "gpt-4.1-2025-04-14"))
 })
 
 # Custom tests -----------------------------------------------------------------
@@ -93,7 +112,7 @@ test_that("structured data work with and without wrapper", {
 # Custom -----------------------------------------------------------------
 
 test_that("value_turn() treats empty content string as null", {
-  stub <- ProviderOpenAICompatible(name = "", base_url = "", model = "")
+  stub <- ProviderOpenAICompatible(name = "", base_url = "")
 
   result <- list(
     choices = list(list(
@@ -109,7 +128,7 @@ test_that("value_turn() treats empty content string as null", {
     ))
   )
 
-  turn <- value_turn(stub, result)
+  turn <- value_turn(stub, test_model(), result)
   # Empty content string should not produce ContentText("")
   expect_false(
     any(map_lgl(turn@contents, function(c) S7_inherits(c, ContentText)))
@@ -120,7 +139,7 @@ test_that("value_turn() treats empty content string as null", {
 })
 
 test_that("empty ContentText is dropped during serialization", {
-  stub <- ProviderOpenAICompatible(name = "", base_url = "", model = "")
+  stub <- ProviderOpenAICompatible(name = "", base_url = "")
 
   # Assistant turn with only an empty ContentText should be dropped entirely
   turn <- AssistantTurn(list(ContentText("")))
@@ -147,7 +166,7 @@ test_that("empty ContentText is dropped during serialization", {
 })
 
 test_that("empty ContentText is stripped but tool requests are preserved", {
-  stub <- ProviderOpenAICompatible(name = "", base_url = "", model = "")
+  stub <- ProviderOpenAICompatible(name = "", base_url = "")
 
   turn <- AssistantTurn(list(
     ContentText(""),
@@ -160,30 +179,33 @@ test_that("empty ContentText is stripped but tool requests are preserved", {
 })
 
 test_that("stream_content extracts reasoning_content and reasoning", {
-  stub <- ProviderOpenAICompatible(name = "", base_url = "", model = "")
+  stub <- ProviderOpenAICompatible(name = "", base_url = "")
 
   event_content <- list(
     choices = list(list(delta = list(reasoning_content = "think")))
   )
   result <- stream_content(stub, event_content)
-  expect_s3_class(result, "ellmer::ContentThinking")
-  expect_equal(result@thinking, "think")
+  expect_length(result, 1)
+  expect_s3_class(result[[1]], "ellmer::ContentThinking")
+  expect_equal(result[[1]]@thinking, "think")
 
   event_reasoning <- list(
     choices = list(list(delta = list(reasoning = "think")))
   )
   result <- stream_content(stub, event_reasoning)
-  expect_s3_class(result, "ellmer::ContentThinking")
-  expect_equal(result@thinking, "think")
+  expect_length(result, 1)
+  expect_s3_class(result[[1]], "ellmer::ContentThinking")
+  expect_equal(result[[1]]@thinking, "think")
 
   event_text <- list(choices = list(list(delta = list(content = "hello"))))
   result <- stream_content(stub, event_text)
-  expect_s3_class(result, "ellmer::ContentText")
-  expect_equal(result@text, "hello")
+  expect_length(result, 1)
+  expect_s3_class(result[[1]], "ellmer::ContentText")
+  expect_equal(result[[1]]@text, "hello")
 })
 
 test_that("value_turn extracts reasoning_content and reasoning", {
-  stub <- ProviderOpenAICompatible(name = "", base_url = "", model = "")
+  stub <- ProviderOpenAICompatible(name = "", base_url = "")
 
   result_content <- list(
     choices = list(list(
@@ -195,7 +217,7 @@ test_that("value_turn extracts reasoning_content and reasoning", {
       )
     ))
   )
-  turn <- value_turn(stub, result_content)
+  turn <- value_turn(stub, test_model(), result_content)
   expect_equal(length(turn@contents), 2)
   expect_s3_class(turn@contents[[1]], "ellmer::ContentThinking")
   expect_equal(turn@contents[[1]]@thinking, "Let me think...")
@@ -212,7 +234,7 @@ test_that("value_turn extracts reasoning_content and reasoning", {
       )
     ))
   )
-  turn <- value_turn(stub, result_reasoning)
+  turn <- value_turn(stub, test_model(), result_reasoning)
   expect_equal(length(turn@contents), 2)
   expect_s3_class(turn@contents[[1]], "ellmer::ContentThinking")
   expect_equal(turn@contents[[1]]@thinking, "Let me think...")
@@ -221,7 +243,7 @@ test_that("value_turn extracts reasoning_content and reasoning", {
 })
 
 test_that("as_json drops reasoning_content by default", {
-  stub <- ProviderOpenAICompatible(name = "", base_url = "", model = "")
+  stub <- ProviderOpenAICompatible(name = "", base_url = "")
 
   turn <- AssistantTurn(list(
     ContentThinking("Let me think..."),
@@ -239,7 +261,6 @@ test_that("as_json preserves reasoning_content when preserve_thinking = TRUE", {
   stub <- ProviderOpenAICompatible(
     name = "",
     base_url = "",
-    model = "",
     preserve_thinking = TRUE
   )
 
@@ -257,7 +278,7 @@ test_that("as_json preserves reasoning_content when preserve_thinking = TRUE", {
 
 test_that("as_json specialised for OpenAI", {
   withr::local_options(lifecycle_verbosity = "quiet")
-  stub <- ProviderOpenAI(name = "", base_url = "", model = "")
+  stub <- ProviderOpenAI(name = "", base_url = "")
 
   expect_snapshot(
     as_json(stub, type_object(.additional_properties = TRUE)),
@@ -274,5 +295,17 @@ test_that("as_json specialised for OpenAI", {
       required = list("x"),
       additionalProperties = FALSE
     )
+  )
+})
+
+test_that("as_json() references uploaded documents but rejects images", {
+  provider <- ProviderOpenAICompatible("test", "model", "base_url")
+  expect_equal(
+    as_json(provider, ContentUploaded("file-1", "application/pdf")),
+    list(type = "file", file = list(file_id = "file-1"))
+  )
+  expect_snapshot(
+    error = TRUE,
+    as_json(provider, ContentUploaded("file-1", "image/png"))
   )
 })
