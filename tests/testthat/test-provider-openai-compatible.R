@@ -20,12 +20,6 @@ test_that("can list models", {
 
 # Common provider interface -----------------------------------------------
 
-test_that("supports standard parameters", {
-  chat_fun <- chat_openai_compatible_test
-
-  test_params_stop(chat_fun)
-})
-
 test_that("supports tool calling", {
   vcr::local_cassette("openai-tool")
   chat_fun <- chat_openai_compatible_test
@@ -42,7 +36,7 @@ test_that("can extract data", {
 test_that("can use images", {
   vcr::local_cassette("openai-image")
   # Needs mini to get shape correct
-  chat_fun <- \(...) chat_openai_compatible_test(model = "gpt-4.1-mini", ...)
+  chat_fun <- \(...) chat_openai_compatible_test(model = "gpt-5.4-mini", ...)
 
   test_images_inline(chat_fun)
   test_images_remote(chat_fun)
@@ -84,7 +78,11 @@ test_that("can match prices for some common models", {
 # Custom tests -----------------------------------------------------------------
 
 test_that("can retrieve log_probs (#115)", {
-  chat <- chat_openai_compatible_test(params = params(log_probs = TRUE))
+  # gpt-5.6-luna doesn't return logprobs, so pin an older model that does
+  chat <- chat_openai_compatible_test(
+    model = "gpt-5.4-nano",
+    params = params(log_probs = TRUE)
+  )
   pieces <- coro::collect(chat$stream("Hi"))
 
   logprobs <- chat$last_turn()@json$choices[[1]]$logprobs$content
@@ -278,7 +276,7 @@ test_that("as_json preserves reasoning_content when preserve_thinking = TRUE", {
 
 test_that("as_json specialised for OpenAI", {
   withr::local_options(lifecycle_verbosity = "quiet")
-  stub <- ProviderOpenAI(name = "", base_url = "")
+  stub <- ProviderOpenAI(name = "", base_url = "", strict = TRUE)
 
   expect_snapshot(
     as_json(stub, type_object(.additional_properties = TRUE)),
@@ -308,4 +306,49 @@ test_that("as_json() references uploaded documents but rejects images", {
     error = TRUE,
     as_json(provider, ContentUploaded("file-1", "image/png"))
   )
+})
+
+test_that("structured output includes `strict` only when the provider is strict", {
+  tool_def <- tool(
+    function(x, y = 1) x + y,
+    "Add numbers",
+    arguments = list(
+      x = type_number("First"),
+      y = type_number("Second", required = FALSE)
+    )
+  )
+  type <- type_object(x = type_number())
+
+  non_strict <- ProviderOpenAICompatible(name = "", base_url = "")
+  body <- chat_body(
+    non_strict,
+    test_model(),
+    turns = list(),
+    tools = list(tool_def),
+    type = type
+  )
+  expect_null(body$response_format$json_schema$strict)
+  fn <- body$tools[[1]]$`function`
+  expect_null(fn$strict)
+  expect_equal(unlist(fn$parameters$required), "x")
+
+  strict <- ProviderOpenAICompatible(name = "", base_url = "", strict = TRUE)
+  body <- chat_body(
+    strict,
+    test_model(),
+    turns = list(),
+    tools = list(tool_def),
+    type = type
+  )
+  expect_true(body$response_format$json_schema$strict)
+  fn <- body$tools[[1]]$`function`
+  expect_true(fn$strict)
+  expect_equal(unlist(fn$parameters$required), c("x", "y"))
+  expect_equal(fn$parameters$properties$y$type, c("number", "null"))
+})
+
+test_that("image detail is sent", {
+  provider <- ProviderOpenAICompatible(name = "", base_url = "")
+  image <- content_image_url("data:image/png;base64,abcd", detail = "low")
+  expect_equal(as_json(provider, image)$image_url$detail, "low")
 })

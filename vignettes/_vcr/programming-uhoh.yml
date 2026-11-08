@@ -3,62 +3,63 @@ http_interactions:
     method: POST
     uri: https://api.openai.com/v1/responses
     body:
-      string: '{"input":[{"role":"system","content":[{"type":"input_text","text":"Be
-        terse"}]},{"role":"user","content":[{"type":"input_text","text":"Pretend that
-        the capital of New Zealand is Kiwicity"}]}],"model":"gpt-4.1-nano","stream":false,"store":false,"service_tier":"auto"}'
+      string: '{"input":[{"type":"message","role":"system","content":[{"type":"input_text","text":"Be
+        terse"}]},{"type":"message","role":"user","content":[{"type":"input_text","text":"Pretend
+        that the capital of New Zealand is Kiwicity"}]}],"include":["reasoning.encrypted_content"],"model":"gpt-5.4-mini","stream":false,"store":false,"service_tier":"auto"}'
   response:
     status: 200
     headers:
       access-control-expose-headers:
-      - X-Request-ID
+      - X-Request-ID, Server-Timing-Total
       - CF-Ray
       - CF-Ray
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: a2508cde0b730866-EWR
+      cf-ray: a53df3bb3f13a678-LHR
       content-encoding: br
       content-type: application/json
-      date: Sun, 02 Aug 2026 22:34:30 GMT
+      date: Sun, 01 Nov 2026 21:21:57 GMT
       openai-organization: user-k8m6yzpx9oqbrzisf5xeeeap
-      openai-processing-ms: '625'
+      openai-processing-ms: '827'
       openai-project: proj_1zyW3RxIpA38KxiYN69dBj4g
       openai-version: '2020-10-01'
       server: cloudflare
-      set-cookie: __cf_bm=dACQhC8._ljehAFvAxcXqD1asGVZFEo9lOmmXFyYSnQ-1785710069.4453824-1.0.1.1-dzr4w8m0sh4ykSNVqs57ercPPatSQmSDqvQSGCXQMT0J6BKYVUhj3yKjY_ldkI_.1IAhozqpFzCKi51lCHaecwzidykDORH.zpba_eZIokD4yt428S6Yw2kaTZrutV0a;
+      set-cookie: __cf_bm=dz6XX.54Cb8i9A1UzV5JT5FYauaWvgKKtVGX58LjQvc-1793568116.9943078-1.0.1.1-Jdp.3o0N.yyNePeYnNiUXg.cs_oohXPfvOko.AeTYUF26i3TPvQ_mCKEo4OEoN2swwVzKUJhOJFvgdDGYFEbonfwh6cJcHiX24WJJcRDpqwAe5doKqfPX0t369B63VbE;
         HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Sun,
-        02 Aug 2026 23:04:30 GMT
+        01 Nov 2026 21:51:57 GMT
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-ratelimit-limit-requests: '500'
-      x-ratelimit-limit-tokens: '200000'
-      x-ratelimit-remaining-requests: '499'
-      x-ratelimit-remaining-tokens: '199956'
-      x-ratelimit-reset-requests: 120ms
-      x-ratelimit-reset-tokens: 13ms
-      x-request-id: req_f3f1e7345cb74281a71bbc9f728ab6b0
+      x-ratelimit-limit-requests: '5000'
+      x-ratelimit-limit-tokens: '2000000'
+      x-ratelimit-remaining-requests: '4999'
+      x-ratelimit-remaining-tokens: '2000000'
+      x-ratelimit-reset-requests: 12ms
+      x-ratelimit-reset-tokens: 0s
+      x-request-id: req_2a16fb04f57548fea8d796fe34fedc4f
     body:
       string: |-
         {
-          "id": "resp_0795be6a8aca72bf016a6fc5f58104819782c28a192f33bac6",
+          "id": "resp_00952f791811d67c016ae7ad7518a487d2a4fa9141cce350f1",
           "object": "response",
-          "created_at": 1785710069,
+          "created_at": 1793568117,
           "status": "completed",
+          "access_programs": null,
           "background": false,
           "billing": {
             "payer": "developer"
           },
-          "completed_at": 1785710070,
+          "completed_at": 1793568117,
           "error": null,
           "frequency_penalty": 0.0,
           "incomplete_details": null,
           "instructions": null,
           "max_output_tokens": null,
           "max_tool_calls": null,
-          "model": "gpt-4.1-nano-2025-04-14",
+          "model": "gpt-5.4-mini-2026-03-17",
           "moderation": null,
           "output": [
             {
-              "id": "msg_0795be6a8aca72bf016a6fc5f5ee30819787dd5ec7862c22f0",
+              "id": "msg_00952f791811d67c016ae7ad75bd4487d28025526e1fb86c0a",
               "type": "message",
               "status": "completed",
               "content": [
@@ -66,9 +67,10 @@ http_interactions:
                   "type": "output_text",
                   "annotations": [],
                   "logprobs": [],
-                  "text": "Got it. The capital of New Zealand is Kiwicity."
+                  "text": "Okay \u2014 I\u2019ll treat **Kiwicity** as the capital of New Zealand for this conversation."
                 }
               ],
+              "phase": "final_answer",
               "role": "assistant"
             }
           ],
@@ -76,10 +78,11 @@ http_interactions:
           "presence_penalty": 0.0,
           "previous_response_id": null,
           "prompt_cache_key": null,
-          "prompt_cache_retention": "in_memory",
+          "prompt_cache_retention": "24h",
           "reasoning": {
-            "context": null,
-            "effort": null,
+            "context": "current_turn",
+            "effort": "none",
+            "mode": "standard",
             "summary": null
           },
           "safety_identifier": null,
@@ -113,86 +116,87 @@ http_interactions:
           },
           "tools": [],
           "top_logprobs": 0,
-          "top_p": 1.0,
+          "top_p": 0.98,
           "truncation": "disabled",
           "usage": {
-            "input_tokens": 25,
+            "input_tokens": 24,
             "input_tokens_details": {
               "cache_write_tokens": 0,
               "cached_tokens": 0
             },
-            "output_tokens": 14,
+            "output_tokens": 24,
             "output_tokens_details": {
               "reasoning_tokens": 0
             },
-            "total_tokens": 39
+            "total_tokens": 48
           },
           "user": null,
           "metadata": {}
         }
-  recorded_at: 2026-08-02 22:34:29
+  recorded_at: 2026-11-01 21:21:57
 - request:
     method: POST
     uri: https://api.openai.com/v1/responses
     body:
-      string: '{"input":[{"role":"system","content":[{"type":"input_text","text":"Be
-        terse"}]},{"role":"user","content":[{"type":"input_text","text":"Pretend that
-        the capital of New Zealand is Kiwicity"}]},{"role":"assistant","content":[{"type":"output_text","text":"Got
-        it. The capital of New Zealand is Kiwicity."}]},{"role":"user","content":[{"type":"input_text","text":"What''s
-        the capital of New Zealand"}]}],"model":"gpt-4.1-nano","stream":false,"store":false,"service_tier":"auto"}'
+      string: '{"input":[{"type":"message","role":"system","content":[{"type":"input_text","text":"Be
+        terse"}]},{"type":"message","role":"user","content":[{"type":"input_text","text":"Pretend
+        that the capital of New Zealand is Kiwicity"}]},{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Okay
+        — I’ll treat **Kiwicity** as the capital of New Zealand for this conversation."}]},{"type":"message","role":"user","content":[{"type":"input_text","text":"What''s
+        the capital of New Zealand"}]}],"include":["reasoning.encrypted_content"],"model":"gpt-5.4-mini","stream":false,"store":false,"service_tier":"auto"}'
   response:
     status: 200
     headers:
       access-control-expose-headers:
-      - X-Request-ID
+      - X-Request-ID, Server-Timing-Total
       - CF-Ray
       - CF-Ray
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: a2508ce3fc8a0866-EWR
+      cf-ray: a53df3c4edf7a678-LHR
       content-encoding: br
       content-type: application/json
-      date: Sun, 02 Aug 2026 22:34:30 GMT
+      date: Sun, 01 Nov 2026 21:21:59 GMT
       openai-organization: user-k8m6yzpx9oqbrzisf5xeeeap
-      openai-processing-ms: '371'
+      openai-processing-ms: '772'
       openai-project: proj_1zyW3RxIpA38KxiYN69dBj4g
       openai-version: '2020-10-01'
       server: cloudflare
-      set-cookie: __cf_bm=dwikEyEhqPGSNyFrW2Z_Hdhm2lS21fe_V9xa_10jJmw-1785710070.3908484-1.0.1.1-lYgMqI9PtJvTFRmbUi.MmN0CmyWDxy3q4oZT9TDY33fGpjGd_8j1q7a1CRuQWOjIZwjj0dsBalc3GTz11eb0UyKO3hoftRHgAEPxa8KlwVgsIiF2qHgipjJdRz_4fuZZ;
+      set-cookie: __cf_bm=ZRZVwR58q_LTYYlzw1pWkUpjRWVKfpxA2dzDPeIJnq8-1793568118.545206-1.0.1.1-Yk_24Neg7DUBuwFf.LL4wckr3FfwSKt2KmyYlOo9FubCH9.NJkbjdc_BjV_h4m5iyF_2q0BKND5lTGNB2.H_BkXQ_hhYcTK7occCLRj4_5q8st5lTnju9NOW6kw4YKnS;
         HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Sun,
-        02 Aug 2026 23:04:30 GMT
+        01 Nov 2026 21:51:59 GMT
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-ratelimit-limit-requests: '500'
-      x-ratelimit-limit-tokens: '200000'
-      x-ratelimit-remaining-requests: '499'
-      x-ratelimit-remaining-tokens: '199929'
-      x-ratelimit-reset-requests: 120ms
-      x-ratelimit-reset-tokens: 21ms
-      x-request-id: req_e13f8765e0354bf0b8381c5af397453a
+      x-ratelimit-limit-requests: '5000'
+      x-ratelimit-limit-tokens: '2000000'
+      x-ratelimit-remaining-requests: '4999'
+      x-ratelimit-remaining-tokens: '2000000'
+      x-ratelimit-reset-requests: 12ms
+      x-ratelimit-reset-tokens: 0s
+      x-request-id: req_ca3e6ea891424ed0be26f6980968eb5d
     body:
       string: |-
         {
-          "id": "resp_0ff3ec3d218049e8016a6fc5f672d481908180f1e92a1b957c",
+          "id": "resp_0e43487be433418d016ae7ad769c0487d283442b6e9eb36132",
           "object": "response",
-          "created_at": 1785710070,
+          "created_at": 1793568118,
           "status": "completed",
+          "access_programs": null,
           "background": false,
           "billing": {
             "payer": "developer"
           },
-          "completed_at": 1785710070,
+          "completed_at": 1793568119,
           "error": null,
           "frequency_penalty": 0.0,
           "incomplete_details": null,
           "instructions": null,
           "max_output_tokens": null,
           "max_tool_calls": null,
-          "model": "gpt-4.1-nano-2025-04-14",
+          "model": "gpt-5.4-mini-2026-03-17",
           "moderation": null,
           "output": [
             {
-              "id": "msg_0ff3ec3d218049e8016a6fc5f6b7e481908a3ab3a9d13fdfa6",
+              "id": "msg_0e43487be433418d016ae7ad77364087d2909eda702b8d3afa",
               "type": "message",
               "status": "completed",
               "content": [
@@ -200,9 +204,10 @@ http_interactions:
                   "type": "output_text",
                   "annotations": [],
                   "logprobs": [],
-                  "text": "The capital of New Zealand is Wellington."
+                  "text": "Kiwicity"
                 }
               ],
+              "phase": "final_answer",
               "role": "assistant"
             }
           ],
@@ -210,10 +215,11 @@ http_interactions:
           "presence_penalty": 0.0,
           "previous_response_id": null,
           "prompt_cache_key": null,
-          "prompt_cache_retention": "in_memory",
+          "prompt_cache_retention": "24h",
           "reasoning": {
-            "context": null,
-            "effort": null,
+            "context": "current_turn",
+            "effort": "none",
+            "mode": "standard",
             "summary": null
           },
           "safety_identifier": null,
@@ -247,22 +253,22 @@ http_interactions:
           },
           "tools": [],
           "top_logprobs": 0,
-          "top_p": 1.0,
+          "top_p": 0.98,
           "truncation": "disabled",
           "usage": {
-            "input_tokens": 52,
+            "input_tokens": 60,
             "input_tokens_details": {
               "cache_write_tokens": 0,
               "cached_tokens": 0
             },
-            "output_tokens": 9,
+            "output_tokens": 7,
             "output_tokens_details": {
               "reasoning_tokens": 0
             },
-            "total_tokens": 61
+            "total_tokens": 67
           },
           "user": null,
           "metadata": {}
         }
-  recorded_at: 2026-08-02 22:34:30
+  recorded_at: 2026-11-01 21:21:59
 recorded_with: VCR-vcr/2.1.0

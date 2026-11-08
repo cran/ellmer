@@ -74,14 +74,20 @@ test_that("has_claude_structured_output() matches Claude 4.5+ and 5+ models", {
     "claude-sonnet-5-20260201",
     "claude-sonnet-6",
     "claude-opus-7-1",
-    "claude-haiku-10"
+    "claude-haiku-10",
+    # Bedrock model ids (#1182)
+    "anthropic.claude-sonnet-5",
+    "us.anthropic.claude-sonnet-5-5-v1:0",
+    "global.anthropic.claude-opus-5-5-v1:0",
+    "anthropic.claude-sonnet-4-5-20250929-v1:0"
   )))
   expect_all_equal(
     has_claude_structured_output(c(
       "claude-sonnet-4-0",
       "claude-3-5-sonnet-20241022",
       "claude-3-7-sonnet-20250219",
-      "claude-4-sonnet-20250514"
+      "claude-4-sonnet-20250514",
+      "anthropic.claude-3-5-sonnet-20240620-v1:0"
     )),
     FALSE
   )
@@ -298,6 +304,21 @@ test_that("value_turn() prices cache writes at 1.25x while reporting raw tokens"
     cache = ""
   )
 
+  # Fixed test rates, independent of the live price table
+  cache_path <- local_prices_cache()
+  write_prices_cache(
+    cache_path,
+    data.frame(
+      provider = "Anthropic",
+      model = "test-model",
+      variant = "",
+      input = 10,
+      output = 100,
+      cached_input = 1
+    ),
+    updated_at = "2126-01-01T00:00:00Z"
+  )
+
   result <- list(
     content = list(list(type = "text", text = "ok")),
     stop_reason = "end_turn",
@@ -309,7 +330,7 @@ test_that("value_turn() prices cache writes at 1.25x while reporting raw tokens"
     )
   )
 
-  turn <- value_turn(provider, test_model("claude-sonnet-4-20250514"), result)
+  turn <- value_turn(provider, test_model("test-model"), result)
 
   # tokens slot reports raw integer counts (no 1.25x weighting on input).
   expect_equal(
@@ -318,8 +339,8 @@ test_that("value_turn() prices cache writes at 1.25x while reporting raw tokens"
   )
 
   # Cost matches the 1.25x cache-write weighting:
-  #   (1000 + 400 * 1.25) * $3/1M + 50 * $15/1M + 200 * $0.30/1M
-  expected_cost <- ((1000 + 400 * 1.25) * 3 + 50 * 15 + 200 * 0.30) / 1e6
+  #   (1000 + 400 * 1.25) * $10/1M + 50 * $100/1M + 200 * $1/1M
+  expected_cost <- ((1000 + 400 * 1.25) * 10 + 50 * 100 + 200 * 1) / 1e6
   expect_equal(unclass(turn@cost), expected_cost)
 })
 
@@ -332,15 +353,29 @@ test_that("value_turn() prices a refusal fallback at the serving model's rate", 
     beta_headers = character(),
     cache = ""
   )
-  model <- Model(name = "claude-fable-5")
+  model <- Model(name = "test-model-from")
+
+  cache_path <- local_prices_cache()
+  write_prices_cache(
+    cache_path,
+    data.frame(
+      provider = "Anthropic",
+      model = c("test-model-from", "test-model-to"),
+      variant = "",
+      input = c(1, 5),
+      output = c(2, 25),
+      cached_input = c(0, 0)
+    ),
+    updated_at = "2126-01-01T00:00:00Z"
+  )
 
   result <- list(
-    model = "claude-opus-4-8",
+    model = "test-model-to",
     content = list(
       list(
         type = "fallback",
-        from = list(model = "claude-fable-5"),
-        to = list(model = "claude-opus-4-8")
+        from = list(model = "test-model-from"),
+        to = list(model = "test-model-to")
       ),
       list(type = "text", text = "ok")
     ),
@@ -350,7 +385,7 @@ test_that("value_turn() prices a refusal fallback at the serving model's rate", 
 
   turn <- value_turn(provider, model, result)
 
-  # opus-4-8 rates ($5/$25 per 1M), not fable-5's ($10/$50).
+  # test-model-to rates ($5/$25 per 1M), not test-model-from's ($1/$2).
   expect_equal(unclass(turn@cost), (1000 * 5 + 50 * 25) / 1e6)
 })
 
@@ -441,6 +476,62 @@ test_that("stream_merge_chunks() handles citations_delta", {
   expect_equal(result$content[[1]]$text, "Hello")
   expect_length(result$content[[1]]$citations, 1)
   expect_equal(result$content[[1]]$citations[[1]]$url, "https://example.com")
+})
+
+test_that("stream_merge_chunks() takes cumulative usage from message_delta", {
+  provider <- chat_anthropic_test()$get_provider()
+  chunks <- list(
+    list(
+      type = "message_start",
+      message = list(
+        content = list(),
+        usage = list(
+          input_tokens = 2247,
+          cache_creation_input_tokens = 0,
+          output_tokens = 1
+        )
+      )
+    ),
+    list(
+      type = "message_delta",
+      delta = list(stop_reason = "end_turn"),
+      usage = list(
+        input_tokens = 2254,
+        cache_creation_input_tokens = 17269,
+        output_tokens = 40
+      )
+    )
+  )
+
+  completion <- NULL
+  for (chunk in chunks) {
+    completion <- stream_merge_chunks(provider, completion, chunk)
+  }
+
+  expect_equal(
+    value_tokens(provider, completion),
+    tokens(input = 2254 + 17269, output = 40, cached_input = 0)
+  )
+})
+
+test_that("redacted thinking blocks are kept and replayed", {
+  provider <- chat_anthropic_test()$get_provider()
+  result <- list(
+    content = list(
+      list(type = "thinking", thinking = "Hmm", signature = "sig"),
+      list(type = "redacted_thinking", data = "encrypted"),
+      list(type = "text", text = "Hello")
+    ),
+    usage = list(input_tokens = 1, output_tokens = 1)
+  )
+
+  turn <- value_turn(provider, test_model(), result)
+
+  expect_s7_class(turn@contents[[2]], ContentThinking)
+  expect_equal(
+    as_json(provider, turn@contents[[2]]),
+    list(type = "redacted_thinking", data = "encrypted")
+  )
 })
 
 test_that("stream_content() emits Anthropic citations after completed text", {
@@ -680,6 +771,31 @@ test_that("as_json() serializes uploaded file references", {
   expect_equal(
     as_json(provider, ContentUploaded("file-1", "text/csv")),
     list(type = "container_upload", file_id = "file-1")
+  )
+})
+
+test_that("as_json() replays unsigned thinking blocks as text", {
+  provider <- chat_anthropic_test()$get_provider()
+
+  expect_equal(
+    as_json(provider, ContentThinking("Internal reasoning.")),
+    list(
+      type = "text",
+      text = "<thinking>\nInternal reasoning.\n</thinking>\n"
+    )
+  )
+
+  signed <- ContentThinking(
+    "Internal reasoning.",
+    extra = list(signature = "sig")
+  )
+  expect_equal(
+    as_json(provider, signed),
+    list(
+      type = "thinking",
+      thinking = "Internal reasoning.",
+      signature = "sig"
+    )
   )
 })
 

@@ -57,7 +57,7 @@ NULL
 #'
 #' @inheritParams chat_openai
 #' @inherit chat_openai return
-#' @param model `r param_model("claude-sonnet-5", "anthropic")`
+#' @param model `r param_model("claude-sonnet-5-5", "anthropic")`
 #' @param api_key `r lifecycle::badge("deprecated")` Use `credentials` instead.
 #' @param credentials `r api_key_param("ANTHROPIC_API_KEY")`
 #' @param base_url The base URL to the endpoint; the default is the
@@ -94,7 +94,7 @@ chat_anthropic <- function(
   echo <- check_echo(echo)
   base_url <- base_url %||% anthropic_base_url()
 
-  model <- set_default(model, "claude-sonnet-5")
+  model <- set_default(model, "claude-sonnet-5-5")
   cache <- arg_match(cache)
 
   credentials <- as_credentials(
@@ -131,7 +131,7 @@ chat_claude <- chat_anthropic
 
 chat_anthropic_test <- function(
   ...,
-  model = "claude-sonnet-5",
+  model = "claude-sonnet-5-5",
   params = NULL,
   echo = "none"
 ) {
@@ -245,12 +245,7 @@ method(chat_body, ProviderAnthropic) <- function(
       )
       tool_choice <- NULL
     } else {
-      tool_def <- ToolDef(
-        function(...) {},
-        name = "_structured_tool_call",
-        description = "Extract structured data",
-        arguments = type_object(data = type)
-      )
+      tool_def <- structured_output_tool(provider, type)
       tools[[tool_def@name]] <- tool_def
       tool_choice <- list(type = "tool", name = tool_def@name)
       output_config <- NULL
@@ -308,7 +303,7 @@ method(chat_params, ProviderAnthropic) <- function(provider, params) {
   )
 
   # Unlike other providers, Claude requires that this be set
-  params$max_tokens <- params$max_tokens %||% 4096
+  params$max_tokens <- params$max_tokens %||% 32000
 
   params$stop_sequences <- as.list(params$stop_sequences)
 
@@ -420,7 +415,9 @@ method(stream_merge_chunks, ProviderAnthropic) <- function(
   } else if (chunk$type == "message_delta") {
     result$stop_reason <- chunk$delta$stop_reason
     result$stop_sequence <- chunk$delta$stop_sequence
-    result$usage$output_tokens <- chunk$usage$output_tokens
+    # `message_delta` usage is cumulative, and for server tools its input and
+    # cache counts can exceed those reported by `message_start`.
+    result$usage <- modify_list(result$usage, compact(chunk$usage))
   } else if (chunk$type == "error") {
     if (chunk$error$type == "overloaded_error") {
       # https://docs.anthropic.com/en/api/messages-streaming#error-events
@@ -520,6 +517,9 @@ method(value_turn_with_turns, ProviderAnthropic) <- function(
         content$thinking,
         extra = list(signature = content$signature)
       ))
+    } else if (content$type == "redacted_thinking") {
+      # https://platform.claude.com/docs/en/build-with-claude/thinking#redacted-thinking-blocks
+      list(ContentThinking("", extra = list(redacted_data = content$data)))
     } else if (content$type == "fallback") {
       # https://platform.claude.com/docs/en/build-with-claude/refusals-and-fallback
       NULL
@@ -719,12 +719,7 @@ method(count_tokens, ProviderAnthropic) <- function(
       )
       tool_choice <- NULL
     } else {
-      tool_def <- ToolDef(
-        function(...) {},
-        name = "_structured_tool_call",
-        description = "Extract structured data",
-        arguments = type_object(data = type)
-      )
+      tool_def <- structured_output_tool(provider, type)
       tools[[tool_def@name]] <- tool_def
       tool_choice <- list(type = "tool", name = tool_def@name)
       output_config <- NULL
@@ -963,8 +958,18 @@ method(as_json, list(ProviderAnthropic, ContentThinking)) <- function(
   x,
   ...
 ) {
+  if (!is.null(x@extra$redacted_data)) {
+    return(list(type = "redacted_thinking", data = x@extra$redacted_data))
+  }
+
   if (identical(x@thinking, "")) {
     return()
+  }
+
+  if (is.null(x@extra$signature) || !nzchar(x@extra$signature)) {
+    # Unsigned thinking blocks are rejected by the Anthropic API, so replay
+    # thinking from other providers as plain text.
+    return(as_json(provider, ContentText(format(x)), ...))
   }
 
   list(
@@ -1142,10 +1147,16 @@ cache_control <- function(provider) {
   }
 }
 
+method(structured_output_tool, ProviderAnthropic) <- function(provider, type) {
+  new_structured_output_tool("_structured_tool_call", type)
+}
+
 has_claude_structured_output <- function(model) {
   # Matches Claude 4.5+ models, including major versions 5 and later.
   # The name segment is restricted to [a-z] so that version-first names
-  # (claude-3-5-sonnet-*, claude-4-sonnet-*) don't match.
+  # (claude-3-5-sonnet-*, claude-4-sonnet-*) don't match. The pattern isn't
+  # anchored to the start so that Bedrock ids (anthropic.claude-*,
+  # us.anthropic.claude-*) match too.
   # https://platform.claude.com/docs/en/build-with-claude/structured-outputs
-  grepl("^claude-[a-z]+-(4-[5-9]|[5-9]|[1-9]\\d)(-|$)", model)
+  grepl("claude-[a-z]+-(4-[5-9]|[5-9]|[1-9]\\d)(-|$)", model)
 }

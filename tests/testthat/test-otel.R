@@ -12,7 +12,7 @@ test_that("tracing works as expected for synchronous chats", {
   agent_spans <- Filter(function(x) x$name == "invoke_agent", spans)
   expect_length(agent_spans, 2L)
   expect_equal(agent_spans[[1L]]$parent, agent_spans[[2L]]$parent)
-  expect_equal(agent_spans[[1L]]$kind, "client")
+  expect_equal(agent_spans[[1L]]$kind, "internal")
   agent_span_ids <- sapply(agent_spans, function(x) x$span_id)
 
   # We should have (at least) two "execute_tool" spans
@@ -95,6 +95,12 @@ test_that("tracing works as expected for synchronous streams", {
   chat_spans <- Filter(function(x) startsWith(x$name, "chat"), spans)
   expect_length(chat_spans, 1L)
   expect_equal(chat_spans[[1L]]$parent, spans[["invoke_agent"]]$span_id)
+
+  # Time to first token is recorded on the streamed chat span.
+  expect_gt(
+    chat_spans[[1L]]$attributes[["gen_ai.response.time_to_first_chunk"]],
+    0
+  )
 
   # Token usage attributes are recorded on the streamed chat span.
   expect_true(all(vapply(
@@ -277,6 +283,12 @@ test_that("tracing works as expected for asynchronous streams", {
   expect_length(chat_spans, 1L)
   expect_equal(chat_spans[[1L]]$parent, spans[["invoke_agent"]]$span_id)
 
+  # Time to first token is recorded on the streamed chat span.
+  expect_gt(
+    chat_spans[[1L]]$attributes[["gen_ai.response.time_to_first_chunk"]],
+    0
+  )
+
   # Verify that the spans started when the stream was suspended are not part of
   # the agent trace.
   expect_equal(spans[["concurrent"]]$parent, spans[["invoke_agent"]]$parent)
@@ -290,6 +302,571 @@ test_that("tracing works as expected for asynchronous streams", {
     function(x) x$parent %in% chat_span_ids,
     logical(1)
   )))
+})
+
+test_that("time to first chunk is recorded on the first streamed chunk", {
+  skip_if_not_installed("otelsdk")
+
+  make_response <- function() {
+    coro::generator(function() {
+      yield(list(type = "chunk"))
+      yield(list(type = "chunk"))
+      yield(list(type = "chunk"))
+    })()
+  }
+  n <- 0
+  local_mocked_bindings(
+    chat_perform = function(...) make_response(),
+    stream_merge_chunks = function(provider, result, chunk) list(),
+    stream_content = function(provider, event, completion) {
+      n <<- n + 1
+      switch(n, list(ContentText("")), list(ContentText("hi")), list())
+    },
+    value_finish_reason = function(provider, result) "success",
+    value_turn = function(provider, model, result, has_type = FALSE) {
+      AssistantTurn(list(ContentText("hi")), tokens = c(0, 0, 0), cost = 0)
+    }
+  )
+
+  recorded <- with_otel_record({
+    chat <- Chat$new(test_provider("Test"), model = test_model("test-model"))
+    coro::collect(chat$stream("hi"))
+  })
+
+  chat_spans <- Filter(function(x) startsWith(x$name, "chat"), recorded$traces)
+  ttft <- chat_spans[[1L]]$attributes[["gen_ai.response.time_to_first_chunk"]]
+  expect_type(ttft, "double")
+  expect_gt(ttft, 0)
+  expect_equal(chat_spans[[1L]]$attributes[["gen_ai.request.stream"]], TRUE)
+
+  points <- otel_metric_points(recorded$metrics)
+  expect_setequal(
+    names(points),
+    c(
+      "gen_ai.client.inference.duration",
+      "gen_ai.client.inference.time_to_first_chunk",
+      "gen_ai.client.inference.time_per_output_chunk",
+      "gen_ai.invoke_agent.duration",
+      "gen_ai.invoke_agent.inference_calls",
+      "gen_ai.invoke_agent.tool_calls"
+    )
+  )
+  # Three chunks: one time to first chunk, two inter-chunk intervals.
+  chunk_point <- points[["gen_ai.client.inference.time_per_output_chunk"]][[1L]]
+  expect_equal(chunk_point$count, 2L)
+  ttft_point <- points[["gen_ai.client.inference.time_to_first_chunk"]][[1L]]
+  expect_equal(ttft_point$count, 1L)
+  expect_equal(ttft_point$sum, ttft)
+  expect_equal(
+    ttft_point$attributes,
+    list(
+      "gen_ai.operation.name" = "chat",
+      "gen_ai.provider.name" = "test",
+      "gen_ai.request.model" = "test-model"
+    )
+  )
+})
+
+test_that("time per output chunk is recorded for asynchronous streams", {
+  skip_if_not_installed("otelsdk")
+
+  make_response <- function() {
+    coro::generator(function() {
+      yield(list(type = "chunk"))
+      yield(list(type = "chunk"))
+      yield(list(type = "chunk"))
+    })()
+  }
+  n <- 0
+  local_mocked_bindings(
+    chat_perform = function(...) make_response(),
+    stream_merge_chunks = function(provider, result, chunk) list(),
+    stream_content = function(provider, event, completion) {
+      n <<- n + 1
+      switch(n, list(ContentText("")), list(ContentText("hi")), list())
+    },
+    value_finish_reason = function(provider, result) "success",
+    value_turn = function(provider, model, result, has_type = FALSE) {
+      AssistantTurn(list(ContentText("hi")), tokens = c(0, 0, 0), cost = 0)
+    }
+  )
+
+  recorded <- with_otel_record({
+    chat <- Chat$new(test_provider("Test"), model = test_model("test-model"))
+    sync(coro::async_collect(chat$stream_async("hi")))
+  })
+
+  # Three chunks: one time to first chunk, two inter-chunk intervals.
+  points <- otel_metric_points(recorded$metrics)
+  chunk_point <- points[["gen_ai.client.inference.time_per_output_chunk"]][[1L]]
+  expect_equal(chunk_point$count, 2L)
+  ttft_point <- points[["gen_ai.client.inference.time_to_first_chunk"]][[1L]]
+  expect_equal(ttft_point$count, 1L)
+})
+
+test_that("token usage and operation duration are recorded as metrics", {
+  skip_if_not_installed("otelsdk")
+
+  local_mocked_bindings(
+    chat_perform = function(...) list(),
+    resp_body_json = function(...) list(),
+    resp_timing = function(...) list(total = 1),
+    value_tokens = function(provider, result) {
+      list(input = 3, cached_input = 1, output = 5)
+    },
+    value_reasoning_tokens = function(provider, result) 2,
+    value_turn = function(provider, model, result, has_type = FALSE) {
+      AssistantTurn(
+        list(ContentText("hi")),
+        tokens = c(3, 5, 1),
+        cost = 0,
+        finish_reason = "stop"
+      )
+    }
+  )
+
+  recorded <- with_otel_record({
+    chat <- Chat$new(test_provider(), model = test_model())
+    chat$chat("hi")
+  })
+
+  chat_span <- recorded$traces[["chat "]]
+  expect_equal(
+    chat_span$attributes[["gen_ai.usage.cache_read.input_tokens"]],
+    1L
+  )
+  expect_equal(chat_span$status, "ok")
+  expect_equal(chat_span$attributes[["gen_ai.response.finish_reasons"]], "stop")
+  expect_null(chat_span$attributes[["gen_ai.request.stream"]])
+
+  points <- otel_metric_points(recorded$metrics)
+  expect_setequal(
+    names(points),
+    c(
+      "gen_ai.client.inference.duration",
+      "gen_ai.client.inference.operation.input_tokens",
+      "gen_ai.client.inference.operation.output_tokens",
+      "gen_ai.client.inference.usage.input_tokens",
+      "gen_ai.client.inference.usage.output_tokens",
+      "gen_ai.client.inference.usage.cache_read.input_tokens",
+      "gen_ai.client.inference.usage.reasoning.output_tokens",
+      "gen_ai.invoke_agent.duration",
+      "gen_ai.invoke_agent.inference_calls",
+      "gen_ai.invoke_agent.tool_calls"
+    )
+  )
+  input <- points[["gen_ai.client.inference.operation.input_tokens"]][[1L]]
+  output <- points[["gen_ai.client.inference.operation.output_tokens"]][[1L]]
+  expect_equal(input$sum, 4)
+  expect_equal(output$sum, 5)
+  expect_null(input$attributes[["gen_ai.token.type"]])
+  usage <- points[["gen_ai.client.inference.usage.input_tokens"]][[1L]]
+  expect_equal(usage$value, 4)
+  expect_equal(usage$attributes[["gen_ai.token.modality"]], "unknown")
+  expect_equal(
+    points[["gen_ai.client.inference.usage.output_tokens"]][[1L]]$value,
+    5
+  )
+  expect_equal(
+    points[["gen_ai.client.inference.usage.cache_read.input_tokens"]][[
+      1L
+    ]]$value,
+    1
+  )
+  expect_equal(
+    points[["gen_ai.client.inference.usage.reasoning.output_tokens"]][[
+      1L
+    ]]$value,
+    2
+  )
+  expect_equal(points[["gen_ai.client.inference.duration"]][[1L]]$count, 1L)
+  expect_equal(points[["gen_ai.invoke_agent.inference_calls"]][[1L]]$sum, 1)
+  expect_equal(points[["gen_ai.invoke_agent.tool_calls"]][[1L]]$sum, 0)
+  expect_equal(
+    points[["gen_ai.invoke_agent.duration"]][[1L]]$attributes[[
+      "gen_ai.operation.name"
+    ]],
+    "invoke_agent"
+  )
+
+  # Token usage and the agent metrics are also set on the invoke_agent span.
+  agent_span <- recorded$traces[["invoke_agent"]]
+  expect_equal(agent_span$attributes[["gen_ai.usage.input_tokens"]], 4L)
+  expect_equal(agent_span$attributes[["gen_ai.usage.output_tokens"]], 5L)
+  expect_equal(
+    agent_span$attributes[["gen_ai.invoke_agent.inference_calls"]],
+    1L
+  )
+  expect_equal(agent_span$attributes[["gen_ai.invoke_agent.tool_calls"]], 0L)
+  expect_gt(agent_span$attributes[["gen_ai.invoke_agent.duration"]], 0)
+})
+
+test_that("gen_ai.provider.name uses semconv identifiers for known providers", {
+  expect_equal(otel_provider_name(test_provider("AWS/Bedrock")), "aws.bedrock")
+  expect_equal(otel_provider_name(test_provider("Google/Gemini")), "gcp.gemini")
+  expect_equal(
+    otel_provider_name(test_provider("Azure/OpenAI")),
+    "azure.ai.openai"
+  )
+  expect_equal(otel_provider_name(test_provider("LM Studio")), "lm studio")
+})
+
+test_that("request errors are recorded on spans and metrics", {
+  skip_if_not_installed("otelsdk")
+
+  local_mocked_bindings(chat_perform = function(...) stop("boom"))
+
+  recorded <- with_otel_record({
+    chat <- Chat$new(test_provider(), model = test_model())
+    expect_snapshot(chat$chat("hi"), error = TRUE)
+  })
+
+  for (span in recorded$traces[c("invoke_agent", "chat ")]) {
+    expect_equal(span$status, "error")
+    expect_equal(span$attributes[["error.type"]], "simpleError")
+  }
+  # The exception event is recorded once, on the chat span.
+  expect_length(recorded$traces[["chat "]]$events, 1L)
+  expect_length(recorded$traces[["invoke_agent"]]$events, 0L)
+  expect_equal(
+    recorded$traces[["chat "]]$attributes[["gen_ai.response.finish_reasons"]],
+    "error"
+  )
+
+  points <- otel_metric_points(recorded$metrics)
+  for (name in c(
+    "gen_ai.client.inference.duration",
+    "gen_ai.invoke_agent.duration"
+  )) {
+    expect_equal(points[[name]][[1L]]$attributes[["error.type"]], "simpleError")
+  }
+  # The failed request still counts as an inference call, and the count metrics
+  # don't carry error.type.
+  calls <- points[["gen_ai.invoke_agent.inference_calls"]][[1L]]
+  expect_equal(calls$sum, 1)
+  expect_null(calls$attributes[["error.type"]])
+})
+
+test_that("duration is recorded once when parsing fails after the response", {
+  skip_if_not_installed("otelsdk")
+
+  local_mocked_bindings(
+    chat_perform = function(...) list(),
+    resp_body_json = function(...) list(),
+    resp_timing = function(...) list(total = 1),
+    value_turn = function(...) stop("bad response")
+  )
+
+  recorded <- with_otel_record({
+    chat <- Chat$new(test_provider(), model = test_model())
+    expect_snapshot(chat$chat("hi"), error = TRUE)
+  })
+
+  points <- otel_metric_points(recorded$metrics)
+  duration <- points[["gen_ai.client.inference.duration"]]
+  expect_length(duration, 1L)
+  expect_equal(duration[[1L]]$attributes[["error.type"]], "simpleError")
+  expect_equal(recorded$traces[["chat "]]$status, "error")
+})
+
+test_that("cancelled streams record a cancelled finish reason", {
+  skip_if_not_installed("otelsdk")
+
+  controller <- stream_controller()
+  make_response <- function() {
+    coro::generator(function() {
+      yield(list(type = "partial"))
+    })()
+  }
+  local_mocked_bindings(
+    chat_perform = function(...) make_response(),
+    stream_merge_chunks = function(provider, result, chunk) chunk,
+    stream_content = function(provider, event, completion) {
+      controller$cancel()
+      list(ContentText("partial"))
+    }
+  )
+
+  recorded <- with_otel_record({
+    chat <- Chat$new(test_provider(), model = test_model())
+    coro::collect(chat$stream("hi", controller = controller))
+  })
+
+  expect_equal(
+    recorded$traces[["chat "]]$attributes[["gen_ai.response.finish_reasons"]],
+    "cancelled"
+  )
+  for (span in recorded$traces[c("invoke_agent", "chat ")]) {
+    expect_equal(span$status, "error")
+    expect_equal(span$attributes[["error.type"]], "cancelled")
+    expect_length(span$events, 0L)
+  }
+
+  points <- otel_metric_points(recorded$metrics)
+  for (name in c(
+    "gen_ai.client.inference.duration",
+    "gen_ai.invoke_agent.duration"
+  )) {
+    expect_equal(points[[name]][[1L]]$attributes[["error.type"]], "cancelled")
+  }
+})
+
+test_that("interrupted requests are recorded on spans and metrics", {
+  skip_if_not_installed("otelsdk")
+
+  local_mocked_bindings(chat_perform = function(...) rlang::interrupt())
+
+  recorded <- with_otel_record({
+    chat <- Chat$new(test_provider(), model = test_model())
+    tryCatch(chat$chat("hi"), interrupt = function(e) NULL)
+  })
+
+  for (span in recorded$traces[c("invoke_agent", "chat ")]) {
+    expect_equal(span$status, "error")
+    expect_equal(span$attributes[["error.type"]], "interrupted")
+    expect_length(span$events, 0L)
+  }
+  expect_equal(
+    recorded$traces[["chat "]]$attributes[["gen_ai.response.finish_reasons"]],
+    "interrupted"
+  )
+
+  points <- otel_metric_points(recorded$metrics)
+  for (name in c(
+    "gen_ai.client.inference.duration",
+    "gen_ai.invoke_agent.duration"
+  )) {
+    expect_equal(points[[name]][[1L]]$attributes[["error.type"]], "interrupted")
+  }
+})
+
+test_that("interrupting a stream consumer is recorded when the loop closes", {
+  skip_if_not_installed("otelsdk")
+
+  local_mocked_bindings(
+    chat_perform = function(...) {
+      coro::generator(function() {
+        yield(list(type = "partial"))
+        yield(list(type = "partial"))
+      })()
+    },
+    stream_merge_chunks = function(provider, result, chunk) chunk,
+    stream_content = function(provider, event, completion) {
+      list(ContentText("partial"))
+    }
+  )
+
+  recorded <- with_otel_record({
+    chat <- Chat$new(test_provider(), model = test_model())
+    tryCatch(
+      coro::loop(
+        for (chunk in chat$stream("hi")) {
+          rlang::interrupt()
+        }
+      ),
+      interrupt = function(e) NULL
+    )
+  })
+
+  for (span in recorded$traces[c("invoke_agent", "chat ")]) {
+    expect_equal(span$status, "error")
+    expect_equal(span$attributes[["error.type"]], "interrupted")
+  }
+  expect_equal(
+    recorded$traces[["chat "]]$attributes[["gen_ai.response.finish_reasons"]],
+    "interrupted"
+  )
+
+  points <- otel_metric_points(recorded$metrics)
+  for (name in c(
+    "gen_ai.client.inference.duration",
+    "gen_ai.invoke_agent.duration"
+  )) {
+    expect_equal(points[[name]][[1L]]$attributes[["error.type"]], "interrupted")
+  }
+})
+
+test_that("request params are recorded as gen_ai.request.* attributes", {
+  skip_if_not_installed("otelsdk")
+
+  local_mocked_bindings(
+    chat_perform = function(...) list(),
+    resp_body_json = function(...) list(),
+    resp_timing = function(...) list(total = 1),
+    value_turn = function(provider, model, result, has_type = FALSE) {
+      AssistantTurn(list(ContentText("hi")), tokens = c(0, 0, 0), cost = 0)
+    }
+  )
+
+  spans <- with_otel_record({
+    model <- test_model(
+      params = params(
+        temperature = 0.5,
+        max_tokens = 10,
+        reasoning_effort = "low"
+      )
+    )
+    chat <- Chat$new(test_provider(), model = model)
+    chat$chat("hi")
+  })[["traces"]]
+
+  for (span in spans[c("invoke_agent", "chat ")]) {
+    expect_equal(span$attributes[["gen_ai.request.temperature"]], 0.5)
+    expect_equal(span$attributes[["gen_ai.request.max_tokens"]], 10)
+    expect_equal(span$attributes[["gen_ai.request.reasoning.level"]], "low")
+    expect_null(span$attributes[["gen_ai.request.top_p"]])
+  }
+})
+
+test_that("unsupported request params are not recorded on spans", {
+  skip_if_not_installed("otelsdk")
+
+  local_mocked_bindings(
+    req_perform = function(req, ...) list(),
+    resp_body_json = function(...) list(),
+    resp_timing = function(...) list(total = 1),
+    value_turn = function(provider, model, result, has_type = FALSE) {
+      AssistantTurn(list(ContentText("hi")), tokens = c(0, 0, 0), cost = 0)
+    }
+  )
+
+  recorded <- with_otel_record({
+    # chat_openai() doesn't support `top_k`.
+    chat <- chat_openai(
+      model = "m",
+      credentials = \() "key",
+      params = params(temperature = 0.5, top_k = 5)
+    )
+    expect_snapshot(. <- chat$chat("hi", echo = "none"))
+  })
+
+  for (span in recorded$traces[c("invoke_agent", "chat m")]) {
+    expect_equal(span$attributes[["gen_ai.request.temperature"]], 0.5)
+    expect_null(span$attributes[["gen_ai.request.top_k"]])
+  }
+})
+
+test_that("chat span records server, output type, and tool definitions", {
+  skip_if_not_installed("otelsdk")
+  withr::local_envvar(
+    OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT = "true"
+  )
+
+  tool_f <- tool(
+    function(x) x,
+    name = "echo",
+    description = "Echo",
+    arguments = list(x = type_string("Input"))
+  )
+  spans <- with_otel_record({
+    provider <- test_provider(base_url = "https://example.com/v1")
+    local({
+      local_chat_otel_span(
+        provider,
+        test_model(),
+        type = type_string(),
+        # Built-in tools have no argument schema and are omitted.
+        tools = list(echo = tool_f, search = openai_tool_web_search())
+      )
+    })
+  })[["traces"]]
+
+  attrs <- spans[["chat "]]$attributes
+  expect_equal(attrs[["server.address"]], "example.com")
+  expect_equal(attrs[["server.port"]], 443L)
+  expect_equal(attrs[["gen_ai.output.type"]], "json")
+
+  defs <- jsonlite::fromJSON(
+    attrs[["gen_ai.tool.definitions"]],
+    simplifyVector = FALSE
+  )
+  expect_length(defs, 1L)
+  expect_equal(defs[[1]]$type, "function")
+  expect_equal(defs[[1]]$name, "echo")
+  expect_equal(defs[[1]]$description, "Echo")
+  expect_equal(defs[[1]]$parameters$properties$x$type, "string")
+})
+
+test_that("tool-based structured output records the private tool", {
+  skip_if_not_installed("otelsdk")
+  withr::local_envvar(
+    OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT = "true"
+  )
+  type <- type_object(x = type_number())
+  defs_for <- function(provider, model) {
+    spans <- with_otel_record({
+      local({
+        local_chat_otel_span(provider, model, type = type)
+      })
+    })[["traces"]]
+    defs <- spans[[1L]]$attributes[["gen_ai.tool.definitions"]]
+    if (is.null(defs)) {
+      return(NULL)
+    }
+    jsonlite::fromJSON(defs, simplifyVector = FALSE)
+  }
+
+  # Bedrock always uses a tool.
+  defs <- defs_for(test_aws_bedrock_provider(), test_model("m"))
+  expect_length(defs, 1L)
+  expect_equal(defs[[1]]$name, "structured_tool_call__")
+  expect_equal(defs[[1]]$parameters$properties$data$properties$x$type, "number")
+
+  # Older Claude models fall back to a tool; newer ones use native output.
+  claude <- chat_anthropic(credentials = \() "key")$get_provider()
+  defs <- defs_for(claude, test_model("claude-3-5-sonnet-latest"))
+  expect_equal(defs[[1]]$name, "_structured_tool_call")
+  expect_null(defs_for(claude, test_model("claude-sonnet-4-5")))
+})
+
+test_that("tool definitions omit an empty argument schema", {
+  provider <- chat_google_gemini(credentials = \() "key")$get_provider()
+  def <- as_otel_tool_definition(tool(function() 1, "No args"), provider)
+  expect_named(def, c("type", "name", "description"))
+})
+
+test_that("integer request params are recorded as integers", {
+  model <- test_model(params = params(seed = 1, max_tokens = 10, top_k = 5))
+  attrs <- otel_request_attributes(model)
+  expect_identical(attrs[["gen_ai.request.seed"]], 1L)
+  expect_identical(attrs[["gen_ai.request.max_tokens"]], 10L)
+  expect_identical(attrs[["gen_ai.request.top_k"]], 5L)
+})
+
+test_that("metrics carry server.address and server.port", {
+  provider <- test_provider(base_url = "https://example.com/v1")
+  attrs <- otel_metric_attributes(provider, test_model())
+  expect_equal(attrs[["server.address"]], "example.com")
+  expect_equal(attrs[["server.port"]], 443L)
+})
+
+test_that("server.address strips IPv6 brackets", {
+  attrs <- otel_server_attributes(test_provider(base_url = "http://[::1]:8080"))
+  expect_equal(attrs, list("server.address" = "::1", "server.port" = 8080L))
+})
+
+test_that("reasoning tokens are recorded on the chat span", {
+  skip_if_not_installed("otelsdk")
+
+  local_mocked_bindings(
+    chat_perform = function(...) list(),
+    resp_body_json = function(...) list(),
+    resp_timing = function(...) list(total = 1),
+    value_reasoning_tokens = function(provider, json) 7,
+    value_turn = function(provider, model, result, has_type = FALSE) {
+      AssistantTurn(list(ContentText("hi")), tokens = c(0, 0, 0), cost = 0)
+    }
+  )
+
+  spans <- with_otel_record({
+    chat <- Chat$new(test_provider(), model = test_model())
+    chat$chat("hi")
+  })[["traces"]]
+
+  expect_equal(
+    spans[["chat "]]$attributes[["gen_ai.usage.reasoning.output_tokens"]],
+    7L
+  )
 })
 
 test_that("captures content when OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT is set", {
@@ -349,6 +926,32 @@ test_that("tool_call_response part decodes json-class values", {
   expect_equal(
     jsonlite::fromJSON(encoded, simplifyVector = FALSE)$response,
     list(foo = 1, bar = list(2, 3))
+  )
+})
+
+test_that("tool_call_response part converts Content values (#1145)", {
+  image <- ContentImageInline("image/png", "abc123")
+  part <- as_otel_part(ContentToolResult(value = image))
+  expect_equal(
+    part$response,
+    list(type = "generic", class = "ContentImageInline")
+  )
+
+  part <- as_otel_part(ContentToolResult(
+    value = list(ContentText("hi"), image)
+  ))
+  expect_equal(
+    part$response,
+    list(
+      list(type = "text", content = "hi"),
+      list(type = "generic", class = "ContentImageInline")
+    )
+  )
+
+  encoded <- jsonlite::toJSON(part, auto_unbox = TRUE, null = "null")
+  expect_equal(
+    jsonlite::fromJSON(encoded, simplifyVector = FALSE)$response,
+    part$response
   )
 })
 
@@ -417,4 +1020,64 @@ test_that("conversation id attribute is absent when unset", {
   expect_length(chat_spans, 1L)
   # Per the GenAI semantic conventions, no fallback identifier is invented
   expect_null(chat_spans[[1]]$attributes[["gen_ai.conversation.id"]])
+})
+
+test_that("tool execution duration is recorded as a metric", {
+  skip_if_not_installed("otelsdk")
+
+  request <- function(tool_f) {
+    ContentToolRequest(id = "x", name = "t", arguments = list(), tool = tool_f)
+  }
+  ok <- tool(function() 1, name = "t", description = "A tool")
+  bad <- tool(function() stop("boom"), name = "t", description = "A tool")
+
+  recorded <- with_otel_record({
+    invoke_tool(request(ok))
+    sync(invoke_tool_async(request(bad)))
+  })
+
+  points <- otel_metric_points(recorded$metrics)
+  expect_equal(names(points), "gen_ai.execute_tool.duration")
+  points <- points[["gen_ai.execute_tool.duration"]]
+  expect_length(points, 2L)
+  expect_all_equal(map_int(points, \(x) x$count), 1L)
+  expect_equal(
+    map(points, \(x) x$attributes[["gen_ai.tool.name"]]),
+    list("t", "t")
+  )
+  expect_equal(
+    map(points, \(x) x$attributes[["error.type"]]),
+    list(NULL, "simpleError")
+  )
+})
+
+test_that("interrupted tool calls are recorded on the span and metric", {
+  skip_if_not_installed("otelsdk")
+
+  tool_f <- tool(function() rlang::interrupt(), name = "t", description = "A")
+  request <- ContentToolRequest(
+    id = "x",
+    name = "t",
+    arguments = list(),
+    tool = tool_f
+  )
+
+  recorded <- with_otel_record({
+    tryCatch(invoke_tool(request), interrupt = function(e) NULL)
+    tryCatch(sync(invoke_tool_async(request)), interrupt = function(e) NULL)
+  })
+
+  spans <- Filter(\(x) x$name == "execute_tool t", recorded$traces)
+  expect_length(spans, 2L)
+  expect_all_equal(map_chr(spans, \(x) x$status), "error")
+  expect_all_equal(
+    map_chr(spans, \(x) x$attributes[["error.type"]]),
+    "interrupted"
+  )
+  points <- otel_metric_points(recorded$metrics)[[
+    "gen_ai.execute_tool.duration"
+  ]]
+  expect_length(points, 1L)
+  expect_equal(points[[1L]]$count, 2L)
+  expect_equal(points[[1L]]$attributes[["error.type"]], "interrupted")
 })

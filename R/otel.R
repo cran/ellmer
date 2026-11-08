@@ -5,11 +5,167 @@ otel_capture_content_enabled <- NULL
 local_chat_otel_span <- NULL
 local_tool_otel_span <- NULL
 local_agent_otel_span <- NULL
+otel_record_histogram <- NULL
+otel_record_counter <- NULL
+
+# Histograms from the GenAI semantic conventions for metrics. The
+# `gen_ai.client.inference.*` instruments are defined by the client inference
+# conventions; the agent and tool instruments by the general metrics page.
+# See: https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/client-inference.md
+# See: https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-metrics/
+#
+# The conventions also advise explicit bucket boundaries (e.g. 0.01 to 81.92 s
+# for durations, 1 to 67,108,864 for token counts), but
+# `otel::meter$create_histogram()` only accepts a name, description, and unit,
+# so the SDK's default buckets are used (see r-lib/otel#49). Users can
+# configure views in their collector or SDK to apply the advised boundaries.
+otel_histogram_specs <- list(
+  "gen_ai.client.inference.duration" = list(
+    description = "GenAI client inference operation duration",
+    unit = "s"
+  ),
+  "gen_ai.client.inference.operation.input_tokens" = list(
+    description = "Number of input tokens used per inference operation",
+    unit = "{token}"
+  ),
+  "gen_ai.client.inference.operation.output_tokens" = list(
+    description = "Number of output tokens used per inference operation",
+    unit = "{token}"
+  ),
+  "gen_ai.client.inference.time_to_first_chunk" = list(
+    description = "Time to receive the first chunk of a streamed response",
+    unit = "s"
+  ),
+  "gen_ai.client.inference.time_per_output_chunk" = list(
+    description = "Time per output chunk, for each chunk after the first",
+    unit = "s"
+  ),
+  "gen_ai.execute_tool.duration" = list(
+    description = "The duration of a single tool execution",
+    unit = "s"
+  ),
+  "gen_ai.invoke_agent.duration" = list(
+    description = "The end-to-end duration of a single agent invocation",
+    unit = "s"
+  ),
+  "gen_ai.invoke_agent.inference_calls" = list(
+    description = "The number of inference calls made during an agent invocation",
+    unit = "{inference_call}"
+  ),
+  "gen_ai.invoke_agent.tool_calls" = list(
+    description = "The number of tool calls made during an agent invocation",
+    unit = "{tool_call}"
+  )
+)
+
+# Monotonic token usage counters from the client inference conventions. Each
+# counter is broken down by `gen_ai.token.modality`; providers only report
+# totals, so ellmer reports the `unknown` modality.
+# See: https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/gen-ai-token-metrics.md
+otel_counter_specs <- list(
+  "gen_ai.client.inference.usage.input_tokens" = list(
+    description = "Number of input tokens used, including cached tokens",
+    unit = "{token}"
+  ),
+  "gen_ai.client.inference.usage.output_tokens" = list(
+    description = "Number of output tokens used, including reasoning tokens",
+    unit = "{token}"
+  ),
+  "gen_ai.client.inference.usage.cache_read.input_tokens" = list(
+    description = "Number of input tokens served from a provider-managed cache",
+    unit = "{token}"
+  ),
+  "gen_ai.client.inference.usage.reasoning.output_tokens" = list(
+    description = "Number of output tokens used for reasoning",
+    unit = "{token}"
+  )
+)
+
+# `gen_ai.provider.name` well-known values, keyed by the provider's display
+# name. Other providers fall back to the lowercased display name.
+# See: https://opentelemetry.io/docs/specs/semconv/registry/attributes/gen-ai/
+otel_provider_names <- c(
+  "Anthropic" = "anthropic",
+  "AWS/Bedrock" = "aws.bedrock",
+  "Azure/OpenAI" = "azure.ai.openai",
+  "DeepSeek" = "deepseek",
+  "Google/Gemini" = "gcp.gemini",
+  "Google/Vertex" = "gcp.vertex_ai",
+  "Groq" = "groq",
+  "Mistral" = "mistral_ai",
+  "OpenAI" = "openai",
+  "Perplexity" = "perplexity"
+)
+
+otel_provider_name <- function(provider) {
+  name <- provider@name
+  if (name %in% names(otel_provider_names)) {
+    otel_provider_names[[name]]
+  } else {
+    tolower(name)
+  }
+}
+
+as_otel_int <- function(x) {
+  if (!is.null(x)) as.integer(x)
+}
+
+# Map `params()` onto the `gen_ai.request.*` span attributes, dropping any
+# that the provider reported as unsupported (and so did not send).
+otel_request_attributes <- function(model, unsupported = character()) {
+  p <- model@params
+  p[names(p) %in% unsupported] <- NULL
+  compact(list(
+    "gen_ai.request.temperature" = p$temperature,
+    "gen_ai.request.top_p" = p$top_p,
+    # semconv types these as `int`; `params()` stores them as doubles.
+    "gen_ai.request.top_k" = as_otel_int(p$top_k),
+    "gen_ai.request.frequency_penalty" = p$frequency_penalty,
+    "gen_ai.request.presence_penalty" = p$presence_penalty,
+    "gen_ai.request.seed" = as_otel_int(p$seed),
+    "gen_ai.request.max_tokens" = as_otel_int(p$max_tokens),
+    "gen_ai.request.stop_sequences" = p$stop_sequences,
+    "gen_ai.request.reasoning.level" = p$reasoning_effort
+  ))
+}
+
+# `server.address` and `server.port` from the provider's base URL. The port
+# falls back to the scheme default since semconv requires it when the address
+# is set.
+otel_server_attributes <- function(provider) {
+  url <- tryCatch(httr2::url_parse(provider@base_url), error = function(e) NULL)
+  if (is.null(url) || is.null(url$hostname)) {
+    return(list())
+  }
+  port <- url$port %||% switch(url$scheme %||% "", https = 443, http = 80)
+  compact(list(
+    # IPv6 literals are bracketed in URLs but not in `server.address`.
+    "server.address" = sub("^\\[(.*)\\]$", "\\1", url$hostname),
+    "server.port" = if (!is.null(port)) as.integer(port)
+  ))
+}
+
+# A GenAI semconv tool definition for a ToolDef. Built-in (provider-executed)
+# tools have no argument schema and are omitted by the caller.
+as_otel_tool_definition <- function(tool, provider) {
+  parameters <- as_json(provider, tool@arguments)
+  compact(list(
+    type = "function",
+    name = tool@name,
+    description = tool@description,
+    # Some providers serialize an empty schema as `[]`, which is not a valid
+    # JSON Schema object, so omit it instead.
+    parameters = if (length(parameters)) parameters
+  ))
+}
 
 local({
   otel_is_tracing <- FALSE
   otel_tracer <- NULL
   otel_capture_content <- FALSE
+  otel_is_measuring <- FALSE
+  otel_histograms <- list()
+  otel_counters <- list()
 
   otel_cache_tracer <<- function() {
     if (!requireNamespace("otel", quietly = TRUE)) {
@@ -21,9 +177,38 @@ local({
       val <- Sys.getenv("OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT")
       tolower(val) %in% c("true", "1")
     }
+
+    otel_meter <- otel::get_meter(otel_tracer_name)
+    otel_is_measuring <<- otel::is_measuring_enabled(otel_meter)
+    otel_histograms <<- if (otel_is_measuring) {
+      imap(otel_histogram_specs, function(spec, name) {
+        otel_meter$create_histogram(name, spec$description, unit = spec$unit)
+      })
+    }
+    otel_counters <<- if (otel_is_measuring) {
+      imap(otel_counter_specs, function(spec, name) {
+        otel_meter$create_counter(name, spec$description, unit = spec$unit)
+      })
+    }
   }
 
   otel_capture_content_enabled <<- function() otel_capture_content
+
+  otel_record_counter <<- function(name, value, attributes) {
+    if (!otel_is_measuring) {
+      return()
+    }
+    otel_counters[[name]]$add(value, attributes = compact(attributes))
+    invisible()
+  }
+
+  otel_record_histogram <<- function(name, value, attributes) {
+    if (!otel_is_measuring) {
+      return()
+    }
+    otel_histograms[[name]]$record(value, attributes = compact(attributes))
+    invisible()
+  }
 
   local_chat_otel_span <<- function(
     provider,
@@ -32,6 +217,9 @@ local({
     system_prompt = NULL,
     parent = NULL,
     conversation_id = NULL,
+    stream = FALSE,
+    type = NULL,
+    tools = NULL,
     local_envir = parent.frame()
   ) {
     if (!otel_is_tracing) {
@@ -47,18 +235,39 @@ local({
         # Per the GenAI semantic conventions, gen_ai.conversation.id is only
         # set when the caller has a conversation identifier readily available;
         # never invent a fallback value.
-        attributes = compact(list(
-          "gen_ai.operation.name" = "chat",
-          "gen_ai.provider.name" = tolower(provider@name),
-          "gen_ai.request.model" = model@name,
-          "gen_ai.conversation.id" = conversation_id
-        )),
+        attributes = c(
+          compact(list(
+            "gen_ai.operation.name" = "chat",
+            "gen_ai.provider.name" = otel_provider_name(provider),
+            "gen_ai.request.model" = model@name,
+            "gen_ai.conversation.id" = conversation_id,
+            # Only set when streaming; unset means non-streaming per semconv.
+            "gen_ai.request.stream" = if (stream) TRUE,
+            "gen_ai.output.type" = if (!is.null(type)) "json"
+          )),
+          otel_server_attributes(provider)
+        ),
         tracer = otel_tracer
       )
 
     defer(otel::end_span(chat_span), envir = local_envir)
 
     if (otel_capture_content) {
+      tools <- Filter(\(tool) S7_inherits(tool, ToolDef), unname(tools))
+      # Providers that implement structured output via tool calling add a
+      # private tool to the request; record it so the span matches.
+      if (
+        !is.null(type) && uses_tool_structured_output(provider, model, type)
+      ) {
+        tools <- c(tools, list(structured_output_tool(provider, type)))
+      }
+      if (length(tools)) {
+        defs <- lapply(tools, as_otel_tool_definition, provider = provider)
+        chat_span$set_attribute(
+          "gen_ai.tool.definitions",
+          jsonlite::toJSON(defs, auto_unbox = TRUE, null = "null")
+        )
+      }
       if (!is.null(system_prompt)) {
         parts <- lapply(system_prompt@contents, as_otel_part)
         chat_span$set_attribute(
@@ -67,10 +276,9 @@ local({
         )
       }
       if (length(turns)) {
-        # Tool result values are typed `class_any`, so tools can return objects
-        # (environments, R6, external pointers) that `jsonlite::toJSON` rejects.
-        # Skip emission rather than break the chat; the provider's tool_string
-        # path will surface a descriptive error.
+        # Tool results are normalized at invoke time, so every value should be
+        # encodable by the time it gets here. Still, telemetry must never break
+        # the chat, so skip emission rather than error.
         tryCatch(
           {
             msgs <- lapply(turns, as_otel_message)
@@ -147,13 +355,17 @@ local({
     agent_span <-
       otel::start_span(
         "invoke_agent",
-        options = list(kind = "client"),
-        attributes = compact(list(
-          "gen_ai.operation.name" = "invoke_agent",
-          "gen_ai.provider.name" = tolower(provider@name),
-          "gen_ai.request.model" = model@name,
-          "gen_ai.conversation.id" = conversation_id
-        )),
+        # ellmer's agent loop runs in-process, so this is the semconv
+        # `gen_ai.invoke_agent.internal` span (#1146).
+        options = list(kind = "internal"),
+        attributes = c(
+          compact(list(
+            "gen_ai.operation.name" = "invoke_agent",
+            "gen_ai.provider.name" = otel_provider_name(provider),
+            "gen_ai.request.model" = model@name,
+            "gen_ai.conversation.id" = conversation_id
+          ))
+        ),
         tracer = otel_tracer
       )
 
@@ -182,11 +394,85 @@ with_otel_record <- function(expr) {
   on.exit(otel_cache_tracer())
   otelsdk::with_otel_record({
     otel_cache_tracer()
-    expr
+    value <- expr
+    # otelsdk only returns in-memory metrics once they have been exported,
+    # which would otherwise happen after they are collected, so flush early.
+    # Don't also shut down: with otelsdk >= 0.3.0 that exports a second time
+    # and duplicates every metric.
+    otel::get_default_meter_provider()$flush()
+    value
   })
 }
 
-record_chat_otel_span_status <- function(span, provider, result) {
+# Flatten recorded metrics into a list of data points named by instrument.
+otel_metric_points <- function(metrics) {
+  scopes <- unlist(lapply(metrics, \(x) x$scope_metric_data), recursive = FALSE)
+  data <- unlist(lapply(scopes, \(x) x$metric_data), recursive = FALSE)
+  points <- lapply(data, function(metric) {
+    lapply(metric$point_data_attr, function(point) {
+      list(
+        attributes = unclass(point$attributes),
+        count = point$value$count,
+        sum = point$value$sum,
+        value = point$value$value
+      )
+    })
+  })
+  set_names(points, map_chr(data, \(x) x$instrument_name))
+}
+
+otel_metric_attributes <- function(provider, model, result = NULL) {
+  c(
+    list(
+      "gen_ai.operation.name" = "chat",
+      "gen_ai.provider.name" = otel_provider_name(provider),
+      "gen_ai.request.model" = model@name,
+      "gen_ai.response.model" = result$model
+    ),
+    otel_server_attributes(provider)
+  )
+}
+
+elapsed_secs <- function(start) {
+  as.numeric(Sys.time() - start, units = "secs")
+}
+
+# Records the token metrics and span attributes of a model response. The
+# tokens were spent even if the response later fails to parse, so this runs
+# before parsing. The duration metric and span status wait until after
+# parsing; see `record_chat_otel_duration()` and
+# `record_chat_otel_span_status()`.
+record_chat_otel_span_response <- function(span, provider, model, result) {
+  attributes <- otel_metric_attributes(provider, model, result)
+  tokens <- value_tokens(provider, result)
+  input <- as.integer(tokens$input + tokens$cached_input)
+  output <- as.integer(tokens$output)
+  reasoning <- as.integer(value_reasoning_tokens(provider, result) %||% 0L)
+  if (input > 0L || output > 0L) {
+    otel_record_histogram(
+      "gen_ai.client.inference.operation.input_tokens",
+      input,
+      attributes
+    )
+    otel_record_histogram(
+      "gen_ai.client.inference.operation.output_tokens",
+      output,
+      attributes
+    )
+    usage <- c(
+      "gen_ai.client.inference.usage.input_tokens" = input,
+      "gen_ai.client.inference.usage.output_tokens" = output,
+      "gen_ai.client.inference.usage.cache_read.input_tokens" = as.integer(
+        tokens$cached_input
+      ),
+      "gen_ai.client.inference.usage.reasoning.output_tokens" = reasoning
+    )
+    usage_attributes <- c(attributes, "gen_ai.token.modality" = "unknown")
+    for (name in names(usage)[usage > 0L]) {
+      otel_record_counter(name, usage[[name]], usage_attributes)
+    }
+  }
+
   if (is.null(span) || !span_recording(span)) {
     return()
   }
@@ -196,15 +482,109 @@ record_chat_otel_span_status <- function(span, provider, result) {
   if (!is.null(result$id)) {
     span$set_attribute("gen_ai.response.id", result$id)
   }
-  tokens <- value_tokens(provider, result)
-  input <- as.integer(tokens$input + tokens$cached_input)
-  output <- as.integer(tokens$output)
   if (input > 0L || output > 0L) {
     span$set_attribute("gen_ai.usage.input_tokens", input)
     span$set_attribute("gen_ai.usage.output_tokens", output)
   }
-  # TODO: Consider setting gen_ai.response.finish_reasons.
-  span$set_status("ok")
+  if (tokens$cached_input > 0) {
+    span$set_attribute(
+      "gen_ai.usage.cache_read.input_tokens",
+      as.integer(tokens$cached_input)
+    )
+  }
+  if (reasoning > 0L) {
+    span$set_attribute("gen_ai.usage.reasoning.output_tokens", reasoning)
+  }
+}
+
+# Sets the final status of a chat span. Call it last, once the response has
+# been parsed: otelsdk (>= 0.3.0) treats an ok status as final, so setting it
+# earlier would hide a later failure. A cancelled stream is reported as an
+# error with `error.type = "cancelled"`, matching the duration metric.
+record_chat_otel_span_status <- function(span, error_type = NULL) {
+  if (is.null(span) || !span_recording(span)) {
+    return()
+  }
+  if (is.null(error_type)) {
+    span$set_status("ok")
+  } else {
+    span$set_status("error")
+    span$set_attribute("error.type", error_type)
+  }
+}
+
+# Sets the `gen_ai.request.*` attributes once the provider has built the
+# request, so parameters it ignored (see `standardise_params()`) are omitted.
+record_otel_span_request_params <- function(span, model, unsupported) {
+  if (is.null(span) || !span_recording(span)) {
+    return()
+  }
+  attributes <- otel_request_attributes(model, unsupported)
+  for (name in names(attributes)) {
+    span$set_attribute(name, attributes[[name]])
+  }
+}
+
+otel_error_type <- function(error) {
+  class(error)[1L]
+}
+
+# Records a failed model request: the operation duration metric tagged with
+# `error.type`, plus the exception and error status on the chat span. `start`
+# is `NULL` once the duration has already been recorded for this request.
+record_chat_otel_span_error <- function(span, provider, model, error, start) {
+  if (!is.null(start)) {
+    record_chat_otel_duration(
+      provider,
+      model,
+      start,
+      error_type = otel_error_type(error)
+    )
+  }
+  record_otel_span_error(span, error)
+  if (!is.null(span) && span_recording(span)) {
+    span$set_attribute("gen_ai.response.finish_reasons", "error")
+  }
+}
+
+# Records the `gen_ai.client.inference.duration` metric. A successful request
+# passes the parsed `result` (for `gen_ai.response.model`) and no `error_type`.
+record_chat_otel_duration <- function(
+  provider,
+  model,
+  start,
+  ...,
+  error_type = NULL,
+  result = NULL
+) {
+  check_dots_empty0(...)
+  attributes <- c(
+    otel_metric_attributes(provider, model, result),
+    "error.type" = error_type
+  )
+  otel_record_histogram(
+    "gen_ai.client.inference.duration",
+    elapsed_secs(start),
+    attributes
+  )
+}
+
+# Records a model request that was unwound before it was recorded as a
+# success or an error, e.g. by a keyboard interrupt. Runs from `defer()`,
+# mirroring how `TurnAccumulator$finalize_turn()` marks the partial turn as
+# "interrupted" from `on.exit()`. `start` is `NULL` once the request has been
+# recorded by another path.
+record_chat_otel_span_interrupted <- function(span, provider, model, start) {
+  if (is.null(start)) {
+    return()
+  }
+  record_chat_otel_duration(provider, model, start, error_type = "interrupted")
+  if (is.null(span) || !span_recording(span)) {
+    return()
+  }
+  span$set_status("error")
+  span$set_attribute("error.type", "interrupted")
+  span$set_attribute("gen_ai.response.finish_reasons", "interrupted")
 }
 
 # Convert a single Content into a GenAI semconv "part", a named list emitted
@@ -248,6 +628,13 @@ tool_otel_response <- function(content) {
     # JSON string itself as a quoted string under `auto_unbox = TRUE`.
     return(jsonlite::fromJSON(value, simplifyVector = FALSE))
   }
+  # `Content` values (e.g. an image) aren't JSON-serializable as-is (#1145).
+  if (S7_inherits(value, Content)) {
+    return(as_otel_part(value))
+  }
+  if (is_content_list(value)) {
+    return(lapply(value, as_otel_part))
+  }
   value
 }
 
@@ -275,14 +662,55 @@ otel_chat_input <- function(private, user_turn) {
   )
 }
 
+# Records the time to first chunk (in seconds) as a chat span attribute and
+# as the `gen_ai.client.inference.time_to_first_chunk` histogram. Per the
+# client inference conventions, this is measured from request issuance to the
+# first chunk received, whether or not that chunk contains model output.
+# See: https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/client-inference.md
+record_chat_otel_ttft <- function(span, provider, model, start) {
+  ttft <- elapsed_secs(start)
+  otel_record_histogram(
+    "gen_ai.client.inference.time_to_first_chunk",
+    ttft,
+    otel_metric_attributes(provider, model)
+  )
+  if (is.null(span) || !span_recording(span)) {
+    return()
+  }
+  span$set_attribute("gen_ai.response.time_to_first_chunk", ttft)
+}
+
+# Records the `gen_ai.client.inference.time_per_output_chunk` histogram. Per
+# the client inference conventions, it is "recorded for each chunk received
+# after the first one, measured as the time elapsed from the end of the
+# previous chunk to the end of the current chunk". `previous_chunk_time` is
+# the time the previous chunk was received.
+record_chat_otel_chunk <- function(provider, model, previous_chunk_time) {
+  otel_record_histogram(
+    "gen_ai.client.inference.time_per_output_chunk",
+    elapsed_secs(previous_chunk_time),
+    otel_metric_attributes(provider, model)
+  )
+}
+
 record_chat_otel_span_output <- function(span, turn) {
   if (is.null(span) || !span_recording(span)) {
     return()
   }
-  if (!otel_capture_content_enabled()) {
+  if (!S7_inherits(turn, AssistantTurn)) {
     return()
   }
-  if (!S7_inherits(turn, AssistantTurn)) {
+  # A partial turn only reaches here when the stream was cancelled; it reports
+  # a `cancelled` finish reason, matching `interrupted` from
+  # `record_chat_otel_span_interrupted()`. The convention types this as
+  # `string[]`, but otel can't record a length-1 vector as an array, so a
+  # single finish reason is exported as a scalar. See r-lib/otel#48.
+  if (is_partial_turn(turn)) {
+    span$set_attribute("gen_ai.response.finish_reasons", "cancelled")
+  } else if (!is.na(turn@finish_reason)) {
+    span$set_attribute("gen_ai.response.finish_reasons", turn@finish_reason)
+  }
+  if (!otel_capture_content_enabled()) {
     return()
   }
   msg <- as_otel_message(turn)
@@ -292,13 +720,123 @@ record_chat_otel_span_output <- function(span, turn) {
   )
 }
 
-record_tool_otel_span_error <- function(span, error) {
+# Per-invocation counts backing the invoke_agent span attributes and metrics.
+new_agent_otel_tally <- function() {
+  env(
+    start = Sys.time(),
+    inference_calls = 0L,
+    tool_calls = 0L,
+    tokens = c(0, 0, 0),
+    # `error.type` for the invocation: an error class or "cancelled". An
+    # invocation that ends without completing or setting an error type was
+    # interrupted.
+    error_type = NULL,
+    completed = FALSE
+  )
+}
+
+# Inference calls are counted when the request starts (so failed requests are
+# included); tool calls and tokens come from the completed turn.
+tally_agent_otel_request <- function(tally) {
+  tally$inference_calls <- tally$inference_calls + 1L
+  invisible(tally)
+}
+
+tally_agent_otel_turn <- function(tally, turn) {
+  tally$tool_calls <- tally$tool_calls + length(extract_tool_requests(turn))
+  # tokens are c(input, output, cached_input)
+  tally$tokens <- tally$tokens + ifelse(is.na(turn@tokens), 0, turn@tokens)
+  invisible(tally)
+}
+
+# Records the invoke_agent metrics and, mirroring the chat span, also sets
+# them as attributes on the invoke_agent span.
+record_agent_otel <- function(span, provider, model, tally) {
+  attributes <- otel_metric_attributes(provider, model)
+  attributes[["gen_ai.operation.name"]] <- "invoke_agent"
+  error_type <- tally$error_type %||% if (!tally$completed) "interrupted"
+  values <- list(
+    "gen_ai.invoke_agent.duration" = elapsed_secs(tally$start),
+    "gen_ai.invoke_agent.inference_calls" = tally$inference_calls,
+    "gen_ai.invoke_agent.tool_calls" = tally$tool_calls
+  )
+  # Only the duration metric defines `error.type` in the semantic conventions.
+  otel_record_histogram(
+    "gen_ai.invoke_agent.duration",
+    values[[1L]],
+    c(attributes, "error.type" = error_type)
+  )
+  for (name in names(values)[-1L]) {
+    otel_record_histogram(name, values[[name]], attributes)
+  }
+
+  if (is.null(span) || !span_recording(span)) {
+    return()
+  }
+  for (name in names(values)) {
+    span$set_attribute(name, values[[name]])
+  }
+  if (!is.null(error_type)) {
+    # The exception event is recorded once, on the chat or tool span where it
+    # occurred; the agent span only carries the status and error type.
+    span$set_status("error")
+    span$set_attribute("error.type", error_type)
+  }
+  input <- as.integer(tally$tokens[[1]] + tally$tokens[[3]])
+  output <- as.integer(tally$tokens[[2]])
+  if (input > 0L || output > 0L) {
+    span$set_attribute("gen_ai.usage.input_tokens", input)
+    span$set_attribute("gen_ai.usage.output_tokens", output)
+  }
+}
+
+record_tool_otel_result <- function(request, start, result) {
+  record_tool_otel_duration(
+    request,
+    start,
+    if (tool_errored(result)) tool_error_type(result)
+  )
+}
+
+record_tool_otel_duration <- function(request, start, error_type = NULL) {
+  otel_record_histogram(
+    "gen_ai.execute_tool.duration",
+    elapsed_secs(start),
+    list(
+      "gen_ai.operation.name" = "execute_tool",
+      "gen_ai.tool.name" = request@tool@name,
+      "gen_ai.tool.type" = "function",
+      "error.type" = error_type
+    )
+  )
+}
+
+# The tool counterpart of `record_chat_otel_span_interrupted()`: runs from
+# `defer()` and records the call only if it was unwound before
+# `record_tool_otel_result()` cleared `start`.
+record_tool_otel_interrupted <- function(span, request, start) {
+  if (is.null(start)) {
+    return()
+  }
+  record_tool_otel_duration(request, start, "interrupted")
+  if (is.null(span) || !span_recording(span)) {
+    return()
+  }
+  span$set_status("error")
+  span$set_attribute("error.type", "interrupted")
+}
+
+tool_error_type <- function(result) {
+  if (is.character(result@error)) "error" else class(result@error)[1L]
+}
+
+record_otel_span_error <- function(span, error) {
   if (is.null(span) || !span_recording(span)) {
     return()
   }
   span$record_exception(error)
   span$set_status("error")
-  span$set_attribute("error.type", class(error)[1L])
+  span$set_attribute("error.type", otel_error_type(error))
 }
 
 # Only activate the span if it is non-NULL. If

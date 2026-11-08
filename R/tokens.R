@@ -94,8 +94,15 @@ local_tokens <- function(frame = parent.frame()) {
 #' Report on token usage in the current session
 #'
 #' Call this function to find out the cumulative number of tokens that you
-#' have sent and recieved in the current session. The price will be shown
+#' have sent and received in the current session. The price will be shown
 #' if known.
+#'
+#' Most providers' costs are estimated from published token rates. OpenRouter's
+#' cost reporting differs; see [chat_openrouter()] for details.
+#'
+#' An unknown charge makes the cumulative total for that provider and model
+#' unknown, while known individual turn costs remain available through the
+#' chat object's `get_tokens()` method.
 #'
 #' @export
 #' @return A data frame

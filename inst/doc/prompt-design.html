@@ -363,7 +363,7 @@ popular models:</p>
 <ul>
 <li><a href="https://docs.claude.com/en/docs/build-with-claude/prompt-engineering/overview">Claude</a></li>
 <li><a href="https://developers.openai.com/api/docs/guides/prompt-engineering">OpenAI</a></li>
-<li><a href="https://ai.google.dev/gemini-api/docs/prompting-intro">Gemini</a></li>
+<li><a href="https://aistudio.google.com/docs/prompting-strategies">Gemini</a></li>
 </ul>
 <p>If you have a claude account, you can use its <a href="https://docs.claude.com/en/docs/build-with-claude/prompt-engineering/prompt-generator">prompt-generator</a>.
 It’s specifically tailored for Claude, but I suspect it will help you
@@ -393,11 +393,11 @@ informative names like <code>prompt-extract-metadata.md</code> or
 your prompt(s) in <code>inst/prompts</code>, otherwise it’s fine to put
 them in the project’s root directory.</p>
 <p>Your prompts are going to change over time, so we’d highly recommend
-commiting them to a git repo. That will ensure that you can easily see
+committing them to a git repo. That will ensure that you can easily see
 what has changed, and that if you accidentally make a mistake you can
-easily roll back to a known good verison.</p>
+easily roll back to a known good version.</p>
 <p>If your prompt includes dynamic data, use
-<code>ellmer::interpolate_file()</code> to intergrate it into your
+<code>ellmer::interpolate_file()</code> to integrate it into your
 prompt. <code>interpolate_file()</code> works like <a href="https://glue.tidyverse.org">glue</a> but uses <code>{{ }}</code>
 instead of <code>{ }</code> to make it easier to work with JSON.</p>
 <p>As you iterate the prompt, it’s a good idea to build up a small set
@@ -423,73 +423,75 @@ our experience it does the best job of generating code.</p>
 <p>When I don’t provide a system prompt, I sometimes get answers in
 different languages or different styles of R code:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_anthropic</span>()</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-5&quot;.</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-5-5&quot;.</span></span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(question)</span></code></pre></div>
-<pre><code>#&gt; # Computing Mean and Median for Multiple Variables Grouped by Age and Sex
+<pre><code>#&gt; The approach depends on your tool. Here are the common ones.
 #&gt; 
-#&gt; Here are several approaches depending on your programming language/tool:
-#&gt; 
-#&gt; ## R (using dplyr)
+#&gt; ## R (dplyr)
 #&gt; 
 #&gt; ```r
 #&gt; library(dplyr)
 #&gt; 
-#&gt; df %&gt;%
+#&gt; result &lt;- df %&gt;%
 #&gt;   group_by(age, sex) %&gt;%
-#&gt;   summarise(across(a:z, list(mean = ~mean(., na.rm = TRUE), 
-#&gt;                                median = ~median(., na.rm = TRUE))))
+#&gt;   summarise(
+#&gt;     across(a:z,
+#&gt;            list(mean   = ~mean(.x, na.rm = TRUE),
+#&gt;                 median = ~median(.x, na.rm = TRUE)),
+#&gt;            .names = &quot;{.col}_{.fn}&quot;),
+#&gt;     .groups = &quot;drop&quot;
+#&gt;   )
 #&gt; ```
 #&gt; 
-#&gt; ## Python (using pandas)
+#&gt; - `a:z` selects columns by position, from `a` through `z`. If they&#39;re not 
+#&gt; contiguous, use `all_of(letters)`.
+#&gt; - The output has one row per age/sex combination and columns like `a_mean`, 
+#&gt; `a_median`, `b_mean`, and so on.
+#&gt; 
+#&gt; ## Python (pandas)
 #&gt; 
 #&gt; ```python
-#&gt; import pandas as pd
+#&gt; import string
 #&gt; 
-#&gt; # Assuming your columns a-z are literally named &#39;a&#39; through &#39;z&#39;
-#&gt; cols = list(&#39;abcdefghijklmnopqrstuvwxyz&#39;)
+#&gt; cols = list(string.ascii_lowercase)   # [&#39;a&#39;, &#39;b&#39;, ..., &#39;z&#39;]
 #&gt; 
-#&gt; result = df.groupby([&#39;age&#39;, &#39;sex&#39;])[cols].agg([&#39;mean&#39;, &#39;median&#39;])
+#&gt; result = (df.groupby([&#39;age&#39;, &#39;sex&#39;])[cols]
+#&gt;             .agg([&#39;mean&#39;, &#39;median&#39;]))
+#&gt; 
+#&gt; # optional: flatten the MultiIndex columns to a_mean, a_median, ...
+#&gt; result.columns = [f&quot;{c}_{stat}&quot; for c, stat in result.columns]
+#&gt; result = result.reset_index()
 #&gt; ```
 #&gt; 
-#&gt; ## SQL
+#&gt; pandas skips NaN by default.
 #&gt; 
-#&gt; SQL doesn&#39;t have a shorthand for &quot;all columns a-z,&quot; so you&#39;d need to write it 
-#&gt; explicitly (or generate the query dynamically):
+#&gt; ## SQL (for comparison)
+#&gt; 
+#&gt; Medians vary by database. In PostgreSQL, for example:
 #&gt; 
 #&gt; ```sql
-#&gt; SELECT 
-#&gt;     age, 
-#&gt;     sex,
-#&gt;     AVG(a) AS a_mean, 
-#&gt;     -- SQL lacks a native MEDIAN function in many dialects; 
-#&gt;     -- Postgres example using percentile_cont:
-#&gt;     PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY a) AS a_median,
-#&gt;     AVG(b) AS b_mean,
-#&gt;     PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY b) AS b_median
-#&gt;     -- ... continue for c through z
-#&gt; FROM your_table
+#&gt; SELECT age, sex,
+#&gt;        AVG(a) AS a_mean,
+#&gt;        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY a) AS a_median,
+#&gt;        ...
+#&gt; FROM df
 #&gt; GROUP BY age, sex;
 #&gt; ```
 #&gt; 
-#&gt; For SQL, it&#39;s often easier to **generate this query programmatically** using 
-#&gt; Python/R string manipulation if you have 26 variables.
+#&gt; You&#39;d need to generate the 26 pairs of columns programmatically.
 #&gt; 
-#&gt; ---
+#&gt; ## Tips
 #&gt; 
-#&gt; ### A few clarifying questions to give you a more precise answer:
+#&gt; - **If `age` is continuous**, you&#39;ll get a group for every distinct value. You 
+#&gt; may want to bin it first:
+#&gt;   - R: `mutate(age_group = cut(age, breaks = c(0, 18, 35, 50, 65, Inf)))`
+#&gt;   - Python: `df[&#39;age_group&#39;] = pd.cut(df[&#39;age&#39;], bins=[0, 18, 35, 50, 65, 
+#&gt; 120])`
+#&gt; - **For a long format** (one row per variable), which is often easier to read 
+#&gt; or plot, use `pivot_longer()` in R or `melt()` in pandas before summarising.
 #&gt; 
-#&gt; 1. **What tool/language are you using?** (R, Python, SQL, Stata, SPSS, Excel, 
-#&gt; etc.)
-#&gt; 2. **Are your variables literally named `a`, `b`, `c`, ... `z`**, or is this a 
-#&gt; placeholder for differently-named variables (e.g., `var1`, `income`, `height`, 
-#&gt; etc.)?
-#&gt; 3. **Do you want the output in long format** (one row per variable/stat/group) 
-#&gt; **or wide format** (one row per group, with separate columns for each 
-#&gt; variable&#39;s mean/median)?
-#&gt; 4. **How should missing values (NA) be handled** — excluded from calculations, 
-#&gt; or should they affect the result some other way?
-#&gt; 
-#&gt; Let me know these details and I can tailor the exact code for your situation!</code></pre>
+#&gt; If you tell me which language you&#39;re using, and whether `age` is exact or 
+#&gt; banded, I can tailor the code.</code></pre>
 <p>I can ensure that I always get R code in a specific style by
 providing a system prompt:</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_anthropic</span>(</span>
@@ -497,60 +499,80 @@ providing a system prompt:</p>
 <span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="st">  You are an expert R programmer who prefers the tidyverse.</span></span>
 <span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="st">&quot;</span></span>
 <span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>)</span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-5&quot;.</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-5-5&quot;.</span></span>
 <span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(question)</span></code></pre></div>
-<pre><code>#&gt; Here&#39;s how to compute the mean and median across variables `a` through `z`, 
-#&gt; grouped by `age` and `sex`:
+<pre><code>#&gt; Use `dplyr::summarise()` with `across()`, selecting the columns with `a:z` and 
+#&gt; passing a named list of functions:
 #&gt; 
 #&gt; ```r
-#&gt; library(tidyverse)
+#&gt; library(dplyr)
 #&gt; 
-#&gt; df %&gt;%
-#&gt;   group_by(age, sex) %&gt;%
-#&gt;   summarise(
-#&gt;     across(a:z, list(mean = mean, median = median), na.rm = TRUE),
-#&gt;     .groups = &quot;drop&quot;
-#&gt;   )
-#&gt; ```
-#&gt; 
-#&gt; ### Notes:
-#&gt; 
-#&gt; - **`a:z`** uses tidy-select&#39;s column range syntax — it works as long as your 
-#&gt; columns are actually named `a`, `b`, `c`, ..., `z` and appear in that order in 
-#&gt; your data frame. This is often more convenient than typing out 
-#&gt; `all_of(letters)`.
-#&gt; 
-#&gt; - If your columns aren&#39;t contiguous or ordered alphabetically, use:
-#&gt;   ```r
-#&gt;   across(all_of(letters), list(mean = mean, median = median), na.rm = TRUE)
-#&gt;   ```
-#&gt;   since `letters` is a built-in R constant containing `&quot;a&quot;` through `&quot;z&quot;`.
-#&gt; 
-#&gt; - **`na.rm = TRUE`** ensures missing values don&#39;t cause `NA` results — remove 
-#&gt; it if you want NAs to propagate.
-#&gt; 
-#&gt; - The output column names will look like `a_mean`, `a_median`, `b_mean`, 
-#&gt; `b_median`, etc.
-#&gt; 
-#&gt; ### Customizing names
-#&gt; 
-#&gt; If you want a different naming pattern, use the `.names` argument:
-#&gt; 
-#&gt; ```r
-#&gt; df %&gt;%
-#&gt;   group_by(age, sex) %&gt;%
+#&gt; df |&gt;
+#&gt;   group_by(age, sex) |&gt;
 #&gt;   summarise(
 #&gt;     across(
-#&gt;       all_of(letters),
+#&gt;       a:z,
 #&gt;       list(mean = mean, median = median),
-#&gt;       na.rm = TRUE,
-#&gt;       .names = &quot;{.fn}_{.col}&quot;
+#&gt;       .names = &quot;{.col}_{.fn}&quot;
 #&gt;     ),
 #&gt;     .groups = &quot;drop&quot;
 #&gt;   )
 #&gt; ```
 #&gt; 
-#&gt; This would produce names like `mean_a`, `median_a`, `mean_b`, `median_b`, etc.</code></pre>
+#&gt; This gives one row per `age` × `sex` combination, with columns `a_mean`, 
+#&gt; `a_median`, `b_mean`, `b_median`, and so on.
+#&gt; 
+#&gt; ## Notes
+#&gt; 
+#&gt; **Missing values.** If your data has `NA`s, pass `na.rm = TRUE` using a lambda:
+#&gt; 
+#&gt; ```r
+#&gt; df |&gt;
+#&gt;   group_by(age, sex) |&gt;
+#&gt;   summarise(
+#&gt;     across(
+#&gt;       a:z,
+#&gt;       list(
+#&gt;         mean   = \(x) mean(x, na.rm = TRUE),
+#&gt;         median = \(x) median(x, na.rm = TRUE)
+#&gt;       )
+#&gt;     ),
+#&gt;     .groups = &quot;drop&quot;
+#&gt;   )
+#&gt; ```
+#&gt; 
+#&gt; **Selecting columns.** `a:z` selects every column positioned between `a` and 
+#&gt; `z`. If the columns aren&#39;t contiguous, or `age` or `sex` sit between them, 
+#&gt; select by name instead:
+#&gt; 
+#&gt; ```r
+#&gt; across(all_of(letters), ...)
+#&gt; ```
+#&gt; 
+#&gt; This uses the built-in `letters` vector (`&quot;a&quot;` to `&quot;z&quot;`). It errors if any of 
+#&gt; those columns is missing, which is often what you want.
+#&gt; 
+#&gt; **Long format.** If you&#39;d rather have one row per group and variable, with 
+#&gt; `mean` and `median` columns, reshape the result:
+#&gt; 
+#&gt; ```r
+#&gt; library(tidyr)
+#&gt; 
+#&gt; df |&gt;
+#&gt;   group_by(age, sex) |&gt;
+#&gt;   summarise(
+#&gt;     across(a:z, list(mean = mean, median = median), .names = &quot;{.col}__{.fn}&quot;),
+#&gt;     .groups = &quot;drop&quot;
+#&gt;   ) |&gt;
+#&gt;   pivot_longer(
+#&gt;     cols = -c(age, sex),
+#&gt;     names_to = c(&quot;variable&quot;, &quot;.value&quot;),
+#&gt;     names_sep = &quot;__&quot;
+#&gt;   )
+#&gt; ```
+#&gt; 
+#&gt; Here I used `&quot;__&quot;` as the separator in `.names` so it can&#39;t clash with any 
+#&gt; underscores in variable names.</code></pre>
 <p>Note that I’m using both a system prompt (which defines the general
 behaviour) and a user prompt (which asks the specific question). You
 could put all this content in the user prompt and get similar results,
@@ -564,13 +586,22 @@ explanation and sample data:</p>
 <span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="st">  Just give me the code. I don&#39;t want any explanation or sample data.</span></span>
 <span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="st">&quot;</span></span>
 <span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>)</span>
-<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-5&quot;.</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-5-5&quot;.</span></span>
 <span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(question)</span></code></pre></div>
 <pre><code>#&gt; ```r
-#&gt; df %&gt;%
-#&gt;   group_by(age, sex) %&gt;%
-#&gt;   summarise(across(a:z, list(mean = mean, median = median), na.rm = TRUE, 
-#&gt; .names = &quot;{.col}_{.fn}&quot;))
+#&gt; library(dplyr)
+#&gt; 
+#&gt; df |&gt;
+#&gt;   group_by(age, sex) |&gt;
+#&gt;   summarise(
+#&gt;     across(
+#&gt;       a:z,
+#&gt;       list(mean = ~ mean(.x, na.rm = TRUE),
+#&gt;            median = ~ median(.x, na.rm = TRUE)),
+#&gt;       .names = &quot;{.col}_{.fn}&quot;
+#&gt;     ),
+#&gt;     .groups = &quot;drop&quot;
+#&gt;   )
 #&gt; ```</code></pre>
 <p>And of course, if you want a different style of R code, just ask for
 it:</p>
@@ -580,20 +611,28 @@ it:</p>
 <span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="st">  Just give me the code. I don&#39;t want any explanation or sample data.</span></span>
 <span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="st">&quot;</span></span>
 <span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>)</span>
-<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-5&quot;.</span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-5-5&quot;.</span></span>
 <span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(question)</span></code></pre></div>
 <pre><code>#&gt; ```r
-#&gt; dt[, lapply(.SD, function(x) list(mean = mean(x), median = median(x))),
-#&gt;    by = .(age, sex), .SDcols = letters]
+#&gt; library(data.table)
+#&gt; 
+#&gt; setDT(dt)
+#&gt; 
+#&gt; vars &lt;- letters  # a through z
+#&gt; 
+#&gt; res &lt;- dt[, c(
+#&gt;   setNames(lapply(.SD, mean,   na.rm = TRUE), paste0(vars, &quot;_mean&quot;)),
+#&gt;   setNames(lapply(.SD, median, na.rm = TRUE), paste0(vars, &quot;_median&quot;))
+#&gt; ), by = .(age, sex), .SDcols = vars]
 #&gt; ```
 #&gt; 
-#&gt; If you want mean and median as separate columns instead of a list column:
+#&gt; Long format alternative:
 #&gt; 
 #&gt; ```r
-#&gt; cols &lt;- letters
-#&gt; dt[, unlist(lapply(.SD, function(x) list(mean = mean(x), median = median(x))), 
-#&gt; recursive = FALSE),
-#&gt;    by = .(age, sex), .SDcols = cols]
+#&gt; res_long &lt;- melt(dt, id.vars = c(&quot;age&quot;, &quot;sex&quot;), measure.vars = vars)[
+#&gt;   , .(mean = mean(value, na.rm = TRUE),
+#&gt;       median = median(value, na.rm = TRUE)),
+#&gt;   by = .(age, sex, variable)]
 #&gt; ```</code></pre>
 <div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a></span>
 <span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_anthropic</span>(</span>
@@ -602,12 +641,20 @@ it:</p>
 <span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="st">  Just give me the code. I don&#39;t want any explanation or sample data.</span></span>
 <span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="st">&quot;</span></span>
 <span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>)</span>
-<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-5&quot;.</span></span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-5-5&quot;.</span></span>
 <span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(question)</span></code></pre></div>
 <pre><code>#&gt; ```r
-#&gt; vars &lt;- letters
-#&gt; result &lt;- aggregate(. ~ age + sex, data = df[c(&quot;age&quot;, &quot;sex&quot;, vars)],
-#&gt;                      FUN = function(x) c(mean = mean(x), median = median(x)))
+#&gt; vars &lt;- letters  # a through z
+#&gt; 
+#&gt; res &lt;- aggregate(
+#&gt;   df[vars],
+#&gt;   by = df[c(&quot;age&quot;, &quot;sex&quot;)],
+#&gt;   FUN = function(x) c(mean = mean(x, na.rm = TRUE),
+#&gt;                       median = median(x, na.rm = TRUE))
+#&gt; )
+#&gt; 
+#&gt; # Flatten the matrix columns into regular columns
+#&gt; res &lt;- do.call(data.frame, res)
 #&gt; ```</code></pre>
 </div>
 <div id="be-explicit" class="section level3">
@@ -628,13 +675,19 @@ so I provide more details about what I do want:</p>
 <span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a><span class="st">  * Use the base pipe, `|&gt;`, not the magrittr pipe `%&gt;%`.</span></span>
 <span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a><span class="st">&quot;</span></span>
 <span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a>)</span>
-<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-5&quot;.</span></span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-5-5&quot;.</span></span>
 <span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(question)</span></code></pre></div>
 <pre><code>#&gt; ```r
+#&gt; library(dplyr)
+#&gt; 
 #&gt; df |&gt;
+#&gt;   group_by(age, sex) |&gt;
 #&gt;   summarise(
-#&gt;     across(a:z, list(mean = mean, median = median), na.rm = TRUE),
-#&gt;     .by = c(age, sex)
+#&gt;     across(
+#&gt;       a:z,
+#&gt;       list(mean = mean, median = median)
+#&gt;     ),
+#&gt;     .groups = &quot;drop&quot;
 #&gt;   )
 #&gt; ```</code></pre>
 <p>This still doesn’t yield exactly the code that I’d write, but it’s
@@ -650,33 +703,61 @@ explanation of the code:</p>
 <span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a><span class="st">  argument. Just give me the code. I don&#39;t want any explanation or sample data.</span></span>
 <span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a><span class="st">&quot;</span></span>
 <span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a>)</span>
-<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-5&quot;.</span></span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-5-5&quot;.</span></span>
 <span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(question)</span></code></pre></div>
 <pre><code>#&gt; ```r
-#&gt; library(dplyr) # load dplyr for data manipulation (group_by, summarise, across)
+#&gt; # Load dplyr for data manipulation functions and the pipe operator
+#&gt; library(dplyr)
 #&gt; 
-#&gt; result &lt;- df %&gt;%                      # start pipeline with data frame &#39;df&#39;
-#&gt;   group_by(age, sex) %&gt;%               # group rows by combinations of &#39;age&#39; 
-#&gt; and &#39;sex&#39;
-#&gt;   summarise(
-#&gt;     across(
-#&gt;       .cols = letters,                 # &#39;letters&#39; is R&#39;s built-in vector 
-#&gt; c(&quot;a&quot;,&quot;b&quot;,...,&quot;z&quot;)
-#&gt;                                         # selects all columns named a through z
-#&gt;       .fns = list(
-#&gt;         mean   = ~ mean(.x, na.rm = TRUE),   # compute mean of each column, 
-#&gt; ignoring NAs
-#&gt;         median = ~ median(.x, na.rm = TRUE)  # compute median of each column, 
-#&gt; ignoring NAs
-#&gt;       ),
-#&gt;       .names = &quot;{.col}_{.fn}&quot;          # name output columns like &quot;a_mean&quot;, 
-#&gt; &quot;a_median&quot;, etc.
+#&gt; result &lt;- your_data %&gt;%                      # Start with your data frame and 
+#&gt; pipe it forward
+#&gt;   group_by(age, sex) %&gt;%                     # Split the data into groups for 
+#&gt; each age/sex combination
+#&gt;   summarise(                                 # Collapse each group into a 
+#&gt; single row of summaries
+#&gt;     across(                                  # Apply the same function(s) to 
+#&gt; many columns at once
+#&gt;       a:z,                                   # Columns to summarise: every 
+#&gt; column from a through z
+#&gt;       list(mean = mean, median = median),    # Named list of functions to apply
+#&gt; to each column
+#&gt;       na.rm = TRUE,                          # Ignore missing values when 
+#&gt; calculating
+#&gt;       .names = &quot;{.col}_{.fn}&quot;                # Name output columns like 
+#&gt; &quot;a_mean&quot;, &quot;a_median&quot;
 #&gt;     ),
-#&gt;     .groups = &quot;drop&quot;                   # drop grouping structure after 
-#&gt; summarising
+#&gt;     .groups = &quot;drop&quot;                         # Remove the grouping from the 
+#&gt; result
 #&gt;   )
 #&gt; 
-#&gt; print(result) # display the resulting summary table
+#&gt; # Display the result
+#&gt; result
+#&gt; ```
+#&gt; 
+#&gt; Note: `na.rm = TRUE` passed directly to `across()` is deprecated in recent 
+#&gt; dplyr versions. Use this equivalent version if you get a warning:
+#&gt; 
+#&gt; ```r
+#&gt; library(dplyr)                               # Load dplyr
+#&gt; 
+#&gt; result &lt;- your_data %&gt;%                      # Start with your data frame
+#&gt;   group_by(age, sex) %&gt;%                     # Group by age and sex
+#&gt;   summarise(                                 # Summarise each group
+#&gt;     across(
+#&gt;       a:z,                                   # Columns a through z
+#&gt;       list(
+#&gt;         mean   = ~ mean(.x, na.rm = TRUE),   # Mean for each column, ignoring 
+#&gt; NAs (.x = current column)
+#&gt;         median = ~ median(.x, na.rm = TRUE)  # Median for each column, ignoring
+#&gt; NAs
+#&gt;       ),
+#&gt;       .names = &quot;{.col}_{.fn}&quot;                # Name columns like &quot;a_mean&quot;, 
+#&gt; &quot;a_median&quot;
+#&gt;     ),
+#&gt;     .groups = &quot;drop&quot;                         # Remove grouping from the result
+#&gt;   )
+#&gt; 
+#&gt; result                                       # Display the result
 #&gt; ```</code></pre>
 </div>
 <div id="teach-it-about-new-features" class="section level3">
@@ -707,12 +788,18 @@ features, you might need to provide the examples yourself:</p>
 <span id="cb17-18"><a href="#cb17-18" tabindex="-1"></a><span class="st">    )</span></span>
 <span id="cb17-19"><a href="#cb17-19" tabindex="-1"></a><span class="st">&quot;</span></span>
 <span id="cb17-20"><a href="#cb17-20" tabindex="-1"></a>)</span>
-<span id="cb17-21"><a href="#cb17-21" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-5&quot;.</span></span>
+<span id="cb17-21"><a href="#cb17-21" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;claude-sonnet-5-5&quot;.</span></span>
 <span id="cb17-22"><a href="#cb17-22" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(question)</span></code></pre></div>
 <pre><code>#&gt; ```r
+#&gt; library(dplyr)
+#&gt; 
 #&gt; df |&gt;
 #&gt;   summarise(
-#&gt;     across(a:z, list(mean = mean, median = median)),
+#&gt;     across(
+#&gt;       a:z,
+#&gt;       list(mean = mean, median = median),
+#&gt;       .names = &quot;{.col}_{.fn}&quot;
+#&gt;     ),
 #&gt;     .by = c(age, sex)
 #&gt;   )
 #&gt; ```</code></pre>
@@ -758,68 +845,67 @@ page.</p>
 <span id="cb20-5"><a href="#cb20-5" tabindex="-1"></a><span class="st">&quot;</span></span>
 <span id="cb20-6"><a href="#cb20-6" tabindex="-1"></a></span>
 <span id="cb20-7"><a href="#cb20-7" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>(instruct_json)</span>
-<span id="cb20-8"><a href="#cb20-8" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-5.6-terra&quot;.</span></span>
+<span id="cb20-8"><a href="#cb20-8" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-6.1-terra&quot;.</span></span>
 <span id="cb20-9"><a href="#cb20-9" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(ingredients)</span>
-<span id="cb20-10"><a href="#cb20-10" tabindex="-1"></a><span class="co">#&gt; [</span></span>
-<span id="cb20-11"><a href="#cb20-11" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb20-12"><a href="#cb20-12" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;dark brown sugar&quot;,</span></span>
-<span id="cb20-13"><a href="#cb20-13" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: {</span></span>
-<span id="cb20-14"><a href="#cb20-14" tabindex="-1"></a><span class="co">#&gt;       &quot;cups&quot;: &quot;3/4&quot;,</span></span>
-<span id="cb20-15"><a href="#cb20-15" tabindex="-1"></a><span class="co">#&gt;       &quot;grams&quot;: 150</span></span>
-<span id="cb20-16"><a href="#cb20-16" tabindex="-1"></a><span class="co">#&gt;     }</span></span>
-<span id="cb20-17"><a href="#cb20-17" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb20-18"><a href="#cb20-18" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb20-19"><a href="#cb20-19" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;eggs&quot;,</span></span>
-<span id="cb20-20"><a href="#cb20-20" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 2,</span></span>
-<span id="cb20-21"><a href="#cb20-21" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;large&quot;</span></span>
-<span id="cb20-22"><a href="#cb20-22" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb20-23"><a href="#cb20-23" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb20-24"><a href="#cb20-24" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;sour cream&quot;,</span></span>
-<span id="cb20-25"><a href="#cb20-25" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: {</span></span>
-<span id="cb20-26"><a href="#cb20-26" tabindex="-1"></a><span class="co">#&gt;       &quot;cups&quot;: &quot;3/4&quot;,</span></span>
-<span id="cb20-27"><a href="#cb20-27" tabindex="-1"></a><span class="co">#&gt;       &quot;grams&quot;: 165</span></span>
-<span id="cb20-28"><a href="#cb20-28" tabindex="-1"></a><span class="co">#&gt;     }</span></span>
-<span id="cb20-29"><a href="#cb20-29" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb20-30"><a href="#cb20-30" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb20-31"><a href="#cb20-31" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;unsalted butter&quot;,</span></span>
-<span id="cb20-32"><a href="#cb20-32" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: {</span></span>
-<span id="cb20-33"><a href="#cb20-33" tabindex="-1"></a><span class="co">#&gt;       &quot;cups&quot;: &quot;1/2&quot;,</span></span>
-<span id="cb20-34"><a href="#cb20-34" tabindex="-1"></a><span class="co">#&gt;       &quot;grams&quot;: 113</span></span>
+<span id="cb20-10"><a href="#cb20-10" tabindex="-1"></a><span class="co">#&gt; {</span></span>
+<span id="cb20-11"><a href="#cb20-11" tabindex="-1"></a><span class="co">#&gt;   &quot;ingredients&quot;: [</span></span>
+<span id="cb20-12"><a href="#cb20-12" tabindex="-1"></a><span class="co">#&gt;     {</span></span>
+<span id="cb20-13"><a href="#cb20-13" tabindex="-1"></a><span class="co">#&gt;       &quot;name&quot;: &quot;dark brown sugar&quot;,</span></span>
+<span id="cb20-14"><a href="#cb20-14" tabindex="-1"></a><span class="co">#&gt;       &quot;quantity&quot;: 0.75,</span></span>
+<span id="cb20-15"><a href="#cb20-15" tabindex="-1"></a><span class="co">#&gt;       &quot;unit&quot;: &quot;cup&quot;,</span></span>
+<span id="cb20-16"><a href="#cb20-16" tabindex="-1"></a><span class="co">#&gt;       &quot;weight_g&quot;: 150</span></span>
+<span id="cb20-17"><a href="#cb20-17" tabindex="-1"></a><span class="co">#&gt;     },</span></span>
+<span id="cb20-18"><a href="#cb20-18" tabindex="-1"></a><span class="co">#&gt;     {</span></span>
+<span id="cb20-19"><a href="#cb20-19" tabindex="-1"></a><span class="co">#&gt;       &quot;name&quot;: &quot;eggs&quot;,</span></span>
+<span id="cb20-20"><a href="#cb20-20" tabindex="-1"></a><span class="co">#&gt;       &quot;quantity&quot;: 2,</span></span>
+<span id="cb20-21"><a href="#cb20-21" tabindex="-1"></a><span class="co">#&gt;       &quot;size&quot;: &quot;large&quot;</span></span>
+<span id="cb20-22"><a href="#cb20-22" tabindex="-1"></a><span class="co">#&gt;     },</span></span>
+<span id="cb20-23"><a href="#cb20-23" tabindex="-1"></a><span class="co">#&gt;     {</span></span>
+<span id="cb20-24"><a href="#cb20-24" tabindex="-1"></a><span class="co">#&gt;       &quot;name&quot;: &quot;sour cream&quot;,</span></span>
+<span id="cb20-25"><a href="#cb20-25" tabindex="-1"></a><span class="co">#&gt;       &quot;quantity&quot;: 0.75,</span></span>
+<span id="cb20-26"><a href="#cb20-26" tabindex="-1"></a><span class="co">#&gt;       &quot;unit&quot;: &quot;cup&quot;,</span></span>
+<span id="cb20-27"><a href="#cb20-27" tabindex="-1"></a><span class="co">#&gt;       &quot;weight_g&quot;: 165</span></span>
+<span id="cb20-28"><a href="#cb20-28" tabindex="-1"></a><span class="co">#&gt;     },</span></span>
+<span id="cb20-29"><a href="#cb20-29" tabindex="-1"></a><span class="co">#&gt;     {</span></span>
+<span id="cb20-30"><a href="#cb20-30" tabindex="-1"></a><span class="co">#&gt;       &quot;name&quot;: &quot;unsalted butter&quot;,</span></span>
+<span id="cb20-31"><a href="#cb20-31" tabindex="-1"></a><span class="co">#&gt;       &quot;quantity&quot;: 0.5,</span></span>
+<span id="cb20-32"><a href="#cb20-32" tabindex="-1"></a><span class="co">#&gt;       &quot;unit&quot;: &quot;cup&quot;,</span></span>
+<span id="cb20-33"><a href="#cb20-33" tabindex="-1"></a><span class="co">#&gt;       &quot;weight_g&quot;: 113,</span></span>
+<span id="cb20-34"><a href="#cb20-34" tabindex="-1"></a><span class="co">#&gt;       &quot;preparation&quot;: &quot;melted&quot;</span></span>
 <span id="cb20-35"><a href="#cb20-35" tabindex="-1"></a><span class="co">#&gt;     },</span></span>
-<span id="cb20-36"><a href="#cb20-36" tabindex="-1"></a><span class="co">#&gt;     &quot;preparation&quot;: &quot;melted&quot;</span></span>
-<span id="cb20-37"><a href="#cb20-37" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb20-38"><a href="#cb20-38" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb20-39"><a href="#cb20-39" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;vanilla extract&quot;,</span></span>
-<span id="cb20-40"><a href="#cb20-40" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 1,</span></span>
-<span id="cb20-41"><a href="#cb20-41" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;teaspoon&quot;</span></span>
-<span id="cb20-42"><a href="#cb20-42" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb20-43"><a href="#cb20-43" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb20-44"><a href="#cb20-44" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;kosher salt&quot;,</span></span>
-<span id="cb20-45"><a href="#cb20-45" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: &quot;3/4&quot;,</span></span>
-<span id="cb20-46"><a href="#cb20-46" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;teaspoon&quot;</span></span>
-<span id="cb20-47"><a href="#cb20-47" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb20-48"><a href="#cb20-48" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb20-49"><a href="#cb20-49" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;neutral oil&quot;,</span></span>
-<span id="cb20-50"><a href="#cb20-50" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: {</span></span>
-<span id="cb20-51"><a href="#cb20-51" tabindex="-1"></a><span class="co">#&gt;       &quot;cups&quot;: &quot;1/3&quot;,</span></span>
-<span id="cb20-52"><a href="#cb20-52" tabindex="-1"></a><span class="co">#&gt;       &quot;milliliters&quot;: 80</span></span>
-<span id="cb20-53"><a href="#cb20-53" tabindex="-1"></a><span class="co">#&gt;     }</span></span>
-<span id="cb20-54"><a href="#cb20-54" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb20-55"><a href="#cb20-55" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb20-56"><a href="#cb20-56" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;all-purpose flour&quot;,</span></span>
-<span id="cb20-57"><a href="#cb20-57" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: {</span></span>
-<span id="cb20-58"><a href="#cb20-58" tabindex="-1"></a><span class="co">#&gt;       &quot;cups&quot;: &quot;1 1/2&quot;,</span></span>
-<span id="cb20-59"><a href="#cb20-59" tabindex="-1"></a><span class="co">#&gt;       &quot;grams&quot;: 190</span></span>
-<span id="cb20-60"><a href="#cb20-60" tabindex="-1"></a><span class="co">#&gt;     }</span></span>
-<span id="cb20-61"><a href="#cb20-61" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb20-62"><a href="#cb20-62" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb20-63"><a href="#cb20-63" tabindex="-1"></a><span class="co">#&gt;     &quot;ingredient&quot;: &quot;sugar&quot;,</span></span>
-<span id="cb20-64"><a href="#cb20-64" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: {</span></span>
-<span id="cb20-65"><a href="#cb20-65" tabindex="-1"></a><span class="co">#&gt;       &quot;grams&quot;: 150,</span></span>
-<span id="cb20-66"><a href="#cb20-66" tabindex="-1"></a><span class="co">#&gt;       &quot;teaspoons&quot;: &quot;1 1/2&quot;</span></span>
-<span id="cb20-67"><a href="#cb20-67" tabindex="-1"></a><span class="co">#&gt;     }</span></span>
-<span id="cb20-68"><a href="#cb20-68" tabindex="-1"></a><span class="co">#&gt;   }</span></span>
-<span id="cb20-69"><a href="#cb20-69" tabindex="-1"></a><span class="co">#&gt; ]</span></span></code></pre></div>
+<span id="cb20-36"><a href="#cb20-36" tabindex="-1"></a><span class="co">#&gt;     {</span></span>
+<span id="cb20-37"><a href="#cb20-37" tabindex="-1"></a><span class="co">#&gt;       &quot;name&quot;: &quot;vanilla extract&quot;,</span></span>
+<span id="cb20-38"><a href="#cb20-38" tabindex="-1"></a><span class="co">#&gt;       &quot;quantity&quot;: 1,</span></span>
+<span id="cb20-39"><a href="#cb20-39" tabindex="-1"></a><span class="co">#&gt;       &quot;unit&quot;: &quot;teaspoon&quot;</span></span>
+<span id="cb20-40"><a href="#cb20-40" tabindex="-1"></a><span class="co">#&gt;     },</span></span>
+<span id="cb20-41"><a href="#cb20-41" tabindex="-1"></a><span class="co">#&gt;     {</span></span>
+<span id="cb20-42"><a href="#cb20-42" tabindex="-1"></a><span class="co">#&gt;       &quot;name&quot;: &quot;kosher salt&quot;,</span></span>
+<span id="cb20-43"><a href="#cb20-43" tabindex="-1"></a><span class="co">#&gt;       &quot;quantity&quot;: 0.75,</span></span>
+<span id="cb20-44"><a href="#cb20-44" tabindex="-1"></a><span class="co">#&gt;       &quot;unit&quot;: &quot;teaspoon&quot;</span></span>
+<span id="cb20-45"><a href="#cb20-45" tabindex="-1"></a><span class="co">#&gt;     },</span></span>
+<span id="cb20-46"><a href="#cb20-46" tabindex="-1"></a><span class="co">#&gt;     {</span></span>
+<span id="cb20-47"><a href="#cb20-47" tabindex="-1"></a><span class="co">#&gt;       &quot;name&quot;: &quot;neutral oil&quot;,</span></span>
+<span id="cb20-48"><a href="#cb20-48" tabindex="-1"></a><span class="co">#&gt;       &quot;quantity&quot;: 0.333,</span></span>
+<span id="cb20-49"><a href="#cb20-49" tabindex="-1"></a><span class="co">#&gt;       &quot;unit&quot;: &quot;cup&quot;,</span></span>
+<span id="cb20-50"><a href="#cb20-50" tabindex="-1"></a><span class="co">#&gt;       &quot;volume_ml&quot;: 80</span></span>
+<span id="cb20-51"><a href="#cb20-51" tabindex="-1"></a><span class="co">#&gt;     },</span></span>
+<span id="cb20-52"><a href="#cb20-52" tabindex="-1"></a><span class="co">#&gt;     {</span></span>
+<span id="cb20-53"><a href="#cb20-53" tabindex="-1"></a><span class="co">#&gt;       &quot;name&quot;: &quot;all-purpose flour&quot;,</span></span>
+<span id="cb20-54"><a href="#cb20-54" tabindex="-1"></a><span class="co">#&gt;       &quot;quantity&quot;: 1.5,</span></span>
+<span id="cb20-55"><a href="#cb20-55" tabindex="-1"></a><span class="co">#&gt;       &quot;unit&quot;: &quot;cups&quot;,</span></span>
+<span id="cb20-56"><a href="#cb20-56" tabindex="-1"></a><span class="co">#&gt;       &quot;weight_g&quot;: 190</span></span>
+<span id="cb20-57"><a href="#cb20-57" tabindex="-1"></a><span class="co">#&gt;     },</span></span>
+<span id="cb20-58"><a href="#cb20-58" tabindex="-1"></a><span class="co">#&gt;     {</span></span>
+<span id="cb20-59"><a href="#cb20-59" tabindex="-1"></a><span class="co">#&gt;       &quot;name&quot;: &quot;sugar&quot;,</span></span>
+<span id="cb20-60"><a href="#cb20-60" tabindex="-1"></a><span class="co">#&gt;       &quot;quantity&quot;: 150,</span></span>
+<span id="cb20-61"><a href="#cb20-61" tabindex="-1"></a><span class="co">#&gt;       &quot;unit&quot;: &quot;g&quot;,</span></span>
+<span id="cb20-62"><a href="#cb20-62" tabindex="-1"></a><span class="co">#&gt;       &quot;additional_quantity&quot;: {</span></span>
+<span id="cb20-63"><a href="#cb20-63" tabindex="-1"></a><span class="co">#&gt;         &quot;quantity&quot;: 1.5,</span></span>
+<span id="cb20-64"><a href="#cb20-64" tabindex="-1"></a><span class="co">#&gt;         &quot;unit&quot;: &quot;teaspoons&quot;</span></span>
+<span id="cb20-65"><a href="#cb20-65" tabindex="-1"></a><span class="co">#&gt;       }</span></span>
+<span id="cb20-66"><a href="#cb20-66" tabindex="-1"></a><span class="co">#&gt;     }</span></span>
+<span id="cb20-67"><a href="#cb20-67" tabindex="-1"></a><span class="co">#&gt;   ]</span></span>
+<span id="cb20-68"><a href="#cb20-68" tabindex="-1"></a><span class="co">#&gt; }</span></span></code></pre></div>
 <p>(I don’t know if the additional colour, “You’re an expert baker who
 also loves JSON”, does anything, but I like to think this helps the LLM
 get into the right mindset of a very nerdy baker.)</p>
@@ -828,7 +914,7 @@ get into the right mindset of a very nerdy baker.)</p>
 <h3>Provide examples</h3>
 <p>This isn’t a bad start, but I prefer to cook with weight and I only
 want to see volumes if weight isn’t available so I provide a couple of
-examples of what I’m looking for. I was pleasantly suprised that I can
+examples of what I’m looking for. I was pleasantly surprised that I can
 provide the input and output examples in such a loose format.</p>
 <div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" tabindex="-1"></a>instruct_weight <span class="ot">&lt;-</span> r<span class="st">&quot;(</span></span>
 <span id="cb21-2"><a href="#cb21-2" tabindex="-1"></a><span class="st">  Here are some examples of the sort of output I&#39;m looking for:</span></span>
@@ -844,57 +930,20 @@ provide the input and output examples in such a loose format.</p>
 <span id="cb21-12"><a href="#cb21-12" tabindex="-1"></a><span class="st">)&quot;</span></span>
 <span id="cb21-13"><a href="#cb21-13" tabindex="-1"></a></span>
 <span id="cb21-14"><a href="#cb21-14" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>(<span class="fu">paste</span>(instruct_json, instruct_weight))</span>
-<span id="cb21-15"><a href="#cb21-15" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-5.6-terra&quot;.</span></span>
+<span id="cb21-15"><a href="#cb21-15" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-6.1-terra&quot;.</span></span>
 <span id="cb21-16"><a href="#cb21-16" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(ingredients)</span>
 <span id="cb21-17"><a href="#cb21-17" tabindex="-1"></a><span class="co">#&gt; [</span></span>
-<span id="cb21-18"><a href="#cb21-18" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb21-19"><a href="#cb21-19" tabindex="-1"></a><span class="co">#&gt;     &quot;name&quot;: &quot;dark brown sugar&quot;,</span></span>
-<span id="cb21-20"><a href="#cb21-20" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 150,</span></span>
-<span id="cb21-21"><a href="#cb21-21" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;g&quot;</span></span>
-<span id="cb21-22"><a href="#cb21-22" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb21-23"><a href="#cb21-23" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb21-24"><a href="#cb21-24" tabindex="-1"></a><span class="co">#&gt;     &quot;name&quot;: &quot;eggs&quot;,</span></span>
-<span id="cb21-25"><a href="#cb21-25" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 2,</span></span>
-<span id="cb21-26"><a href="#cb21-26" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;large&quot;</span></span>
-<span id="cb21-27"><a href="#cb21-27" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb21-28"><a href="#cb21-28" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb21-29"><a href="#cb21-29" tabindex="-1"></a><span class="co">#&gt;     &quot;name&quot;: &quot;sour cream&quot;,</span></span>
-<span id="cb21-30"><a href="#cb21-30" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 165,</span></span>
-<span id="cb21-31"><a href="#cb21-31" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;g&quot;</span></span>
-<span id="cb21-32"><a href="#cb21-32" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb21-33"><a href="#cb21-33" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb21-34"><a href="#cb21-34" tabindex="-1"></a><span class="co">#&gt;     &quot;name&quot;: &quot;unsalted butter, melted&quot;,</span></span>
-<span id="cb21-35"><a href="#cb21-35" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 113,</span></span>
-<span id="cb21-36"><a href="#cb21-36" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;g&quot;</span></span>
-<span id="cb21-37"><a href="#cb21-37" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb21-38"><a href="#cb21-38" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb21-39"><a href="#cb21-39" tabindex="-1"></a><span class="co">#&gt;     &quot;name&quot;: &quot;vanilla extract&quot;,</span></span>
-<span id="cb21-40"><a href="#cb21-40" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 1,</span></span>
-<span id="cb21-41"><a href="#cb21-41" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;teaspoon&quot;</span></span>
-<span id="cb21-42"><a href="#cb21-42" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb21-43"><a href="#cb21-43" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb21-44"><a href="#cb21-44" tabindex="-1"></a><span class="co">#&gt;     &quot;name&quot;: &quot;kosher salt&quot;,</span></span>
-<span id="cb21-45"><a href="#cb21-45" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 0.75,</span></span>
-<span id="cb21-46"><a href="#cb21-46" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;teaspoon&quot;</span></span>
-<span id="cb21-47"><a href="#cb21-47" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb21-48"><a href="#cb21-48" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb21-49"><a href="#cb21-49" tabindex="-1"></a><span class="co">#&gt;     &quot;name&quot;: &quot;neutral oil&quot;,</span></span>
-<span id="cb21-50"><a href="#cb21-50" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 80,</span></span>
-<span id="cb21-51"><a href="#cb21-51" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;ml&quot;</span></span>
-<span id="cb21-52"><a href="#cb21-52" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb21-53"><a href="#cb21-53" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb21-54"><a href="#cb21-54" tabindex="-1"></a><span class="co">#&gt;     &quot;name&quot;: &quot;all-purpose flour&quot;,</span></span>
-<span id="cb21-55"><a href="#cb21-55" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 190,</span></span>
-<span id="cb21-56"><a href="#cb21-56" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;g&quot;</span></span>
-<span id="cb21-57"><a href="#cb21-57" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
-<span id="cb21-58"><a href="#cb21-58" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb21-59"><a href="#cb21-59" tabindex="-1"></a><span class="co">#&gt;     &quot;name&quot;: &quot;sugar&quot;,</span></span>
-<span id="cb21-60"><a href="#cb21-60" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 150,</span></span>
-<span id="cb21-61"><a href="#cb21-61" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;g&quot;,</span></span>
-<span id="cb21-62"><a href="#cb21-62" tabindex="-1"></a><span class="co">#&gt;     &quot;additional_quantity&quot;: 1.5,</span></span>
-<span id="cb21-63"><a href="#cb21-63" tabindex="-1"></a><span class="co">#&gt;     &quot;additional_unit&quot;: &quot;teaspoon&quot;</span></span>
-<span id="cb21-64"><a href="#cb21-64" tabindex="-1"></a><span class="co">#&gt;   }</span></span>
-<span id="cb21-65"><a href="#cb21-65" tabindex="-1"></a><span class="co">#&gt; ]</span></span></code></pre></div>
+<span id="cb21-18"><a href="#cb21-18" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;dark brown sugar&quot;, &quot;quantity&quot;: 150, &quot;unit&quot;: &quot;g&quot;},</span></span>
+<span id="cb21-19"><a href="#cb21-19" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;large eggs&quot;, &quot;quantity&quot;: 2, &quot;unit&quot;: null},</span></span>
+<span id="cb21-20"><a href="#cb21-20" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;sour cream&quot;, &quot;quantity&quot;: 165, &quot;unit&quot;: &quot;g&quot;},</span></span>
+<span id="cb21-21"><a href="#cb21-21" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;unsalted butter, melted&quot;, &quot;quantity&quot;: 113, &quot;unit&quot;: &quot;g&quot;},</span></span>
+<span id="cb21-22"><a href="#cb21-22" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;vanilla extract&quot;, &quot;quantity&quot;: 1, &quot;unit&quot;: &quot;teaspoon&quot;},</span></span>
+<span id="cb21-23"><a href="#cb21-23" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;kosher salt&quot;, &quot;quantity&quot;: 0.75, &quot;unit&quot;: &quot;teaspoon&quot;},</span></span>
+<span id="cb21-24"><a href="#cb21-24" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;neutral oil&quot;, &quot;quantity&quot;: 80, &quot;unit&quot;: &quot;ml&quot;},</span></span>
+<span id="cb21-25"><a href="#cb21-25" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;all-purpose flour&quot;, &quot;quantity&quot;: 190, &quot;unit&quot;: &quot;g&quot;},</span></span>
+<span id="cb21-26"><a href="#cb21-26" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;sugar&quot;, &quot;quantity&quot;: 150, &quot;unit&quot;: &quot;g&quot;},</span></span>
+<span id="cb21-27"><a href="#cb21-27" tabindex="-1"></a><span class="co">#&gt;   {&quot;name&quot;: &quot;sugar&quot;, &quot;quantity&quot;: 1.5, &quot;unit&quot;: &quot;teaspoon&quot;}</span></span>
+<span id="cb21-28"><a href="#cb21-28" tabindex="-1"></a><span class="co">#&gt; ]</span></span></code></pre></div>
 <p>Just providing the examples seems to work remarkably well. But I
 found it useful to also include a description of what the examples are
 trying to accomplish. I’m not sure if this helps the LLM or not, but it
@@ -975,21 +1024,20 @@ and that ellmer will convert it into an R data structure.</p>
 <span id="cb24-7"><a href="#cb24-7" tabindex="-1"></a>type_ingredients <span class="ot">&lt;-</span> <span class="fu">type_array</span>(type_ingredient)</span>
 <span id="cb24-8"><a href="#cb24-8" tabindex="-1"></a></span>
 <span id="cb24-9"><a href="#cb24-9" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>(<span class="fu">c</span>(instruct_json, instruct_weight))</span>
-<span id="cb24-10"><a href="#cb24-10" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-5.6-terra&quot;.</span></span>
+<span id="cb24-10"><a href="#cb24-10" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-6.1-terra&quot;.</span></span>
 <span id="cb24-11"><a href="#cb24-11" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat_structured</span>(ingredients, <span class="at">type =</span> type_ingredients)</span>
-<span id="cb24-12"><a href="#cb24-12" tabindex="-1"></a><span class="co">#&gt; # A tibble: 10 × 3</span></span>
-<span id="cb24-13"><a href="#cb24-13" tabindex="-1"></a><span class="co">#&gt;    name                    quantity unit      </span></span>
-<span id="cb24-14"><a href="#cb24-14" tabindex="-1"></a><span class="co">#&gt;    &lt;chr&gt;                      &lt;dbl&gt; &lt;chr&gt;     </span></span>
-<span id="cb24-15"><a href="#cb24-15" tabindex="-1"></a><span class="co">#&gt;  1 dark brown sugar          150    &quot;g&quot;       </span></span>
-<span id="cb24-16"><a href="#cb24-16" tabindex="-1"></a><span class="co">#&gt;  2 large eggs                  2    &quot;&quot;        </span></span>
-<span id="cb24-17"><a href="#cb24-17" tabindex="-1"></a><span class="co">#&gt;  3 sour cream                165    &quot;g&quot;       </span></span>
-<span id="cb24-18"><a href="#cb24-18" tabindex="-1"></a><span class="co">#&gt;  4 unsalted butter, melted   113    &quot;g&quot;       </span></span>
-<span id="cb24-19"><a href="#cb24-19" tabindex="-1"></a><span class="co">#&gt;  5 vanilla extract             1    &quot;teaspoon&quot;</span></span>
-<span id="cb24-20"><a href="#cb24-20" tabindex="-1"></a><span class="co">#&gt;  6 kosher salt                 0.75 &quot;teaspoon&quot;</span></span>
-<span id="cb24-21"><a href="#cb24-21" tabindex="-1"></a><span class="co">#&gt;  7 neutral oil                80    &quot;ml&quot;      </span></span>
-<span id="cb24-22"><a href="#cb24-22" tabindex="-1"></a><span class="co">#&gt;  8 all-purpose flour         190    &quot;g&quot;       </span></span>
-<span id="cb24-23"><a href="#cb24-23" tabindex="-1"></a><span class="co">#&gt;  9 sugar                     150    &quot;g&quot;       </span></span>
-<span id="cb24-24"><a href="#cb24-24" tabindex="-1"></a><span class="co">#&gt; 10 sugar                       1.5  &quot;teaspoon&quot;</span></span></code></pre></div>
+<span id="cb24-12"><a href="#cb24-12" tabindex="-1"></a><span class="co">#&gt; # A tibble: 9 × 3</span></span>
+<span id="cb24-13"><a href="#cb24-13" tabindex="-1"></a><span class="co">#&gt;   name                    quantity unit      </span></span>
+<span id="cb24-14"><a href="#cb24-14" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;                      &lt;dbl&gt; &lt;chr&gt;     </span></span>
+<span id="cb24-15"><a href="#cb24-15" tabindex="-1"></a><span class="co">#&gt; 1 dark brown sugar          150    &quot;g&quot;       </span></span>
+<span id="cb24-16"><a href="#cb24-16" tabindex="-1"></a><span class="co">#&gt; 2 large eggs                  2    &quot;&quot;        </span></span>
+<span id="cb24-17"><a href="#cb24-17" tabindex="-1"></a><span class="co">#&gt; 3 sour cream                165    &quot;g&quot;       </span></span>
+<span id="cb24-18"><a href="#cb24-18" tabindex="-1"></a><span class="co">#&gt; 4 unsalted butter, melted   113    &quot;g&quot;       </span></span>
+<span id="cb24-19"><a href="#cb24-19" tabindex="-1"></a><span class="co">#&gt; 5 vanilla extract             1    &quot;teaspoon&quot;</span></span>
+<span id="cb24-20"><a href="#cb24-20" tabindex="-1"></a><span class="co">#&gt; 6 kosher salt                 0.75 &quot;teaspoon&quot;</span></span>
+<span id="cb24-21"><a href="#cb24-21" tabindex="-1"></a><span class="co">#&gt; 7 neutral oil                80    &quot;ml&quot;      </span></span>
+<span id="cb24-22"><a href="#cb24-22" tabindex="-1"></a><span class="co">#&gt; 8 all-purpose flour         190    &quot;g&quot;       </span></span>
+<span id="cb24-23"><a href="#cb24-23" tabindex="-1"></a><span class="co">#&gt; 9 sugar                     150    &quot;g&quot;</span></span></code></pre></div>
 </div>
 <div id="capturing-raw-input" class="section level3">
 <h3>Capturing raw input</h3>
@@ -1030,11 +1078,11 @@ less structured text. For example, imagine you had this text:</p>
 <p>Including the input text in the output makes it easier to see if it’s
 doing a good job:</p>
 <div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a>chat <span class="ot">&lt;-</span> <span class="fu">chat_openai</span>(<span class="fu">c</span>(instruct_json, instruct_weight_input))</span>
-<span id="cb27-2"><a href="#cb27-2" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-5.6-terra&quot;.</span></span>
+<span id="cb27-2"><a href="#cb27-2" tabindex="-1"></a><span class="co">#&gt; Using model = &quot;gpt-6.1-terra&quot;.</span></span>
 <span id="cb27-3"><a href="#cb27-3" tabindex="-1"></a>chat<span class="sc">$</span><span class="fu">chat</span>(recipe)</span>
 <span id="cb27-4"><a href="#cb27-4" tabindex="-1"></a><span class="co">#&gt; [</span></span>
 <span id="cb27-5"><a href="#cb27-5" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
-<span id="cb27-6"><a href="#cb27-6" tabindex="-1"></a><span class="co">#&gt;     &quot;name&quot;: &quot;unsalted butter, softened&quot;,</span></span>
+<span id="cb27-6"><a href="#cb27-6" tabindex="-1"></a><span class="co">#&gt;     &quot;name&quot;: &quot;softened unsalted butter&quot;,</span></span>
 <span id="cb27-7"><a href="#cb27-7" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 1,</span></span>
 <span id="cb27-8"><a href="#cb27-8" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;cup&quot;,</span></span>
 <span id="cb27-9"><a href="#cb27-9" tabindex="-1"></a><span class="co">#&gt;     &quot;input&quot;: &quot;one cup of softened unsalted butter&quot;</span></span>
@@ -1048,7 +1096,7 @@ doing a good job:</p>
 <span id="cb27-17"><a href="#cb27-17" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
 <span id="cb27-18"><a href="#cb27-18" tabindex="-1"></a><span class="co">#&gt;     &quot;name&quot;: &quot;egg&quot;,</span></span>
 <span id="cb27-19"><a href="#cb27-19" tabindex="-1"></a><span class="co">#&gt;     &quot;quantity&quot;: 1,</span></span>
-<span id="cb27-20"><a href="#cb27-20" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: &quot;egg&quot;,</span></span>
+<span id="cb27-20"><a href="#cb27-20" tabindex="-1"></a><span class="co">#&gt;     &quot;unit&quot;: null,</span></span>
 <span id="cb27-21"><a href="#cb27-21" tabindex="-1"></a><span class="co">#&gt;     &quot;input&quot;: &quot;an egg&quot;</span></span>
 <span id="cb27-22"><a href="#cb27-22" tabindex="-1"></a><span class="co">#&gt;   },</span></span>
 <span id="cb27-23"><a href="#cb27-23" tabindex="-1"></a><span class="co">#&gt;   {</span></span>
@@ -1092,35 +1140,27 @@ my examples.</p>
 <tbody>
 <tr class="odd">
 <td align="left">OpenAI</td>
-<td align="left">gpt-4.1</td>
-<td align="right">11</td>
-<td align="right">75</td>
+<td align="left">gpt-5.4-mini</td>
+<td align="right">521</td>
+<td align="right">210</td>
 <td align="right">0</td>
 <td align="right">$0.00</td>
 </tr>
 <tr class="even">
-<td align="left">OpenAI</td>
-<td align="left">gpt-4.1-nano</td>
-<td align="right">474</td>
-<td align="right">130</td>
+<td align="left">Anthropic</td>
+<td align="left">claude-sonnet-5-5</td>
+<td align="right">980</td>
+<td align="right">3229</td>
 <td align="right">0</td>
-<td align="right">$0.00</td>
+<td align="right">$0.03</td>
 </tr>
 <tr class="odd">
-<td align="left">Anthropic</td>
-<td align="left">claude-sonnet-5</td>
-<td align="right">964</td>
-<td align="right">2263</td>
-<td align="right">0</td>
-<td align="right">$0.02</td>
-</tr>
-<tr class="even">
 <td align="left">OpenAI</td>
-<td align="left">gpt-5.6-terra</td>
+<td align="left">gpt-6.1-terra</td>
 <td align="right">1119</td>
-<td align="right">1170</td>
+<td align="right">1535</td>
 <td align="right">0</td>
-<td align="right">$0.02</td>
+<td align="right">$0.01</td>
 </tr>
 </tbody>
 </table>

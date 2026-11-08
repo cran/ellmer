@@ -10,8 +10,8 @@ vcr::setup_knitr()
 library(ellmer)
 
 ## -----------------------------------------------------------------------------
-chat <- chat_openai(model = "gpt-4o")
-chat$chat("How long ago did Neil Armstrong touch down on the moon?")
+chat <- chat_openai(model = "gpt-5.4-mini")
+chat$chat("What time is it right now in Chicago?")
 
 ## -----------------------------------------------------------------------------
 #' Gets the current time in the given time zone.
@@ -52,7 +52,7 @@ get_current_time()
 chat$register_tool(get_current_time)
 
 ## -----------------------------------------------------------------------------
-chat$chat("How long ago did Neil Armstrong touch down on the moon?")
+chat$chat("What time is it right now in Chicago?")
 
 ## -----------------------------------------------------------------------------
 chat
@@ -106,7 +106,7 @@ chat
 
 ## -----------------------------------------------------------------------------
 # chat <- chat_openai()
-# #> Using model = "gpt-4.1".
+# #> Using model = "gpt-6.1-terra".
 # chat$register_tool(screenshot_website)
 # chat$chat("Describe the design aesthetic of https://tidyverse.org")
 # #> https://tidyverse.org screenshot completed

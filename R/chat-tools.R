@@ -215,16 +215,22 @@ invoke_tool <- function(
 
   tool_span <- local_tool_otel_span(request, parent = otel_span)
 
-  tryCatch(
+  start <- Sys.time()
+  # Covers unwinds that no handler sees (e.g. a keyboard interrupt).
+  defer(record_tool_otel_interrupted(tool_span, request, start))
+  result <- tryCatch(
     {
       result <- do.call(request@tool, args)
       new_tool_result(request, result)
     },
     error = function(e) {
-      record_tool_otel_span_error(tool_span, e)
+      record_otel_span_error(tool_span, e)
       new_tool_result(request, error = e)
     }
   )
+  record_tool_otel_result(request, start, result)
+  start <- NULL
+  result
 }
 
 on_load(
@@ -248,16 +254,22 @@ on_load(
     tool_span <- local_tool_otel_span(request, parent = otel_span)
     context <- tool_context(request)
 
-    tryCatch(
+    start <- Sys.time()
+    # Covers unwinds that no handler sees (e.g. a keyboard interrupt).
+    defer(record_tool_otel_interrupted(tool_span, request, start))
+    result <- tryCatch(
       {
         value <- await(with_tool_context(context, do.call(request@tool, args)))
         new_tool_result(request, value)
       },
       error = function(e) {
-        record_tool_otel_span_error(tool_span, e)
+        record_otel_span_error(tool_span, e)
         new_tool_result(request, error = e)
       }
     )
+    record_tool_otel_result(request, start, result)
+    start <- NULL
+    result
   })
 )
 

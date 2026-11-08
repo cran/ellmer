@@ -421,7 +421,7 @@ chat interactions automatically.</p>
 <span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>server <span class="ot">&lt;-</span> <span class="cf">function</span>(input, output, session) {</span>
 <span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>  chat <span class="ot">&lt;-</span> ellmer<span class="sc">::</span><span class="fu">chat_openai</span>(</span>
 <span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>    <span class="at">system_prompt =</span> <span class="st">&quot;You&#39;re a trickster who answers in riddles&quot;</span>,</span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>    <span class="at">model =</span> <span class="st">&quot;gpt-4.1-nano&quot;</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>    <span class="at">model =</span> <span class="st">&quot;gpt-5.4-mini&quot;</span></span>
 <span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>  )</span>
 <span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a></span>
 <span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>  <span class="fu">chat_mod_server</span>(<span class="st">&quot;chat&quot;</span>, chat)</span>
@@ -476,7 +476,7 @@ server &lt;- function(input, output) {
     # multi-turn conversation.
     chat &lt;- chat_openai(
       system_prompt = &quot;You are a rambling chatbot who likes to tell stories but gets distracted easily.&quot;,
-      model = &quot;gpt-4.1-nano&quot;
+      model = &quot;gpt-5.4-mini&quot;
     )
 
     # Stream the chat completion into the markdown stream. `markdown_stream()`

@@ -1,3 +1,4 @@
+#' @include provider.R
 #' @include provider-claude.R
 #' @include provider-openai-compatible.R
 #' @include files.R
@@ -24,7 +25,7 @@ NULL
 #'   credentials to use in place of the default OAuth device flow, either as a
 #'   named list of headers or as a function that modifies the request. You
 #'   should not usually need to set this.
-#' @param model `r param_model("claude-sonnet-5", "posit")`
+#' @param model `r param_model("claude-sonnet-5-5", "posit")`
 #' @param cache How long to cache inputs? Defaults to "5m" (five minutes).
 #'   Set to "none" to disable caching or "1h" to cache for one hour. This is
 #'   only supported for Claude models and is ignored for other models.
@@ -50,7 +51,7 @@ chat_posit <- function(
   echo = NULL
 ) {
   check_string(base_url)
-  model <- set_default(model, "claude-sonnet-5")
+  model <- set_default(model, "claude-sonnet-5-5")
   cache <- arg_match(cache)
   echo <- check_echo(echo)
 
@@ -75,7 +76,11 @@ chat_posit <- function(
       name = "Posit",
       base_url = paste0(base_url, "/openai/v1"),
       extra_headers = api_headers,
-      credentials = credentials
+      credentials = credentials,
+      # Best guess: the gateway prefixes OpenAI-routed model ids with
+      # "openai/", but the catalog doesn't guarantee this yet.
+      strict = startsWith(model, "openai/"),
+      cache = cache
     )
   }
   model <- Model(name = model, params = params, extra_args = api_args)
@@ -123,7 +128,12 @@ ProviderPositAnthropic <- new_class(
 
 ProviderPositOpenAI <- new_class(
   "ProviderPositOpenAI",
-  parent = ProviderOpenAICompatible
+  parent = ProviderOpenAICompatible,
+  properties = list(
+    # Inert on OpenAI models; carried over from/to ProviderPositAnthropic so
+    # it survives switching model families (#1138).
+    cache = prop_string(default = "5m")
+  )
 )
 
 method(base_request, ProviderPositAnthropic) <- function(provider) {
@@ -177,6 +187,43 @@ method(models_list, ProviderPositOpenAI) <- function(provider) {
     base_url = posit_gateway_url(provider@base_url),
     credentials = provider@credentials
   )
+}
+
+method(provider_set_model, ProviderPositAnthropic) <- function(provider, name) {
+  if (is_claude_model(name)) {
+    provider
+  } else {
+    ProviderPositOpenAI(
+      name = provider@name,
+      base_url = paste0(posit_gateway_url(provider@base_url), "/openai/v1"),
+      extra_headers = provider@extra_headers,
+      credentials = provider@credentials,
+      strict = startsWith(name, "openai/"),
+      cache = provider@cache
+    )
+  }
+}
+
+# `cache` is inert on OpenAI models; it's only carried so it survives a switch
+# to Claude models (#1138). Hide it from print() to avoid suggesting it's used.
+method(print, ProviderPositOpenAI) <- function(x, ...) {
+  provider_print(x, hide = "cache")
+  invisible(x)
+}
+
+method(provider_set_model, ProviderPositOpenAI) <- function(provider, name) {
+  if (is_claude_model(name)) {
+    ProviderPositAnthropic(
+      name = provider@name,
+      base_url = paste0(posit_gateway_url(provider@base_url), "/anthropic/v1"),
+      extra_headers = provider@extra_headers,
+      credentials = provider@credentials,
+      cache = provider@cache
+    )
+  } else {
+    provider@strict <- startsWith(name, "openai/")
+    provider
+  }
 }
 
 is_claude_model <- function(model) {

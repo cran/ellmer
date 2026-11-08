@@ -54,7 +54,7 @@ test_that("can extract data", {
 
 test_that("can search web pages", {
   vcr::local_cassette("openai-v2-web-search")
-  chat_fun <- \(...) chat_openai_test(model = "gpt-4.1", ...)
+  chat_fun <- \(...) chat_openai_test(model = "gpt-5.4-mini", ...)
   test_tool_web_search(
     chat_fun,
     openai_tool_web_search(),
@@ -65,7 +65,7 @@ test_that("can search web pages", {
 test_that("can use images", {
   vcr::local_cassette("openai-v2-image")
   # Needs mini to get shape correct
-  chat_fun <- \(...) chat_openai_test(model = "gpt-4.1-mini", ...)
+  chat_fun <- \(...) chat_openai_test(model = "gpt-5.4-mini", ...)
 
   test_images_inline(chat_fun)
   test_images_remote(chat_fun)
@@ -84,7 +84,7 @@ test_that("file lifecycle works", {
 })
 
 test_that("file_upload() validates expires_in_h", {
-  provider <- chat_openai_test()$get_provider()
+  provider <- chat_openai(credentials = \() "key")$get_provider()
   path <- test_path("apples.pdf")
   expect_snapshot(error = TRUE, {
     file_upload(provider, path, expires_in_h = 0.5)
@@ -100,7 +100,7 @@ test_that("can use documents", {
 })
 
 test_that("documents and pdfs with a url are passed through as file_url", {
-  provider <- chat_openai_test()$get_provider()
+  provider <- chat_openai(credentials = \() "key")$get_provider()
 
   # filename must be omitted because the API rejects file_url + filename
   # together
@@ -113,6 +113,7 @@ test_that("documents and pdfs with a url are passed through as file_url", {
   expect_equal(
     as_json(provider, doc_url),
     list(
+      type = "message",
       role = "user",
       content = list(list(
         type = "input_file",
@@ -130,6 +131,7 @@ test_that("documents and pdfs with a url are passed through as file_url", {
   expect_equal(
     as_json(provider, pdf_url),
     list(
+      type = "message",
       role = "user",
       content = list(list(
         type = "input_file",
@@ -139,8 +141,25 @@ test_that("documents and pdfs with a url are passed through as file_url", {
   )
 })
 
+test_that("as_json() marks message items with type = 'message' (#1153)", {
+  provider <- chat_openai(credentials = \() "key")$get_provider()
+
+  expect_equal(
+    as_json(provider, ContentText("Hi"), role = "user")$type,
+    "message"
+  )
+  expect_equal(
+    as_json(provider, ContentText("Hi"), role = "assistant")$type,
+    "message"
+  )
+  expect_equal(
+    as_json(provider, ContentText("Hi"), role = "system")$type,
+    "message"
+  )
+})
+
 test_that("can match prices for some common models", {
-  provider <- chat_openai_test()$get_provider()
+  provider <- chat_openai(credentials = \() "key")$get_provider()
 
   expect_true(has_cost(provider@name, "gpt-4.1"))
   expect_true(has_cost(provider@name, "gpt-4.1-2025-04-14"))
@@ -171,7 +190,7 @@ test_that("structured data work with and without wrapper", {
 
 test_that("service tier affects pricing", {
   vcr::local_cassette("openai-v2-service-tier")
-  chat <- chat_openai_test(model = "gpt-4.1-nano", service_tier = "priority")
+  chat <- chat_openai_test(model = "gpt-5.4-mini", service_tier = "priority")
   chat$chat("Tell me a joke")
 
   last_turn <- chat$last_turn()
@@ -216,7 +235,7 @@ test_that("can extract dummy response from malformed JSON", {
 })
 
 test_that("value_turn handles NULL service_tier gracefully", {
-  provider <- chat_openai_test()$get_provider()
+  provider <- chat_openai(credentials = \() "key")$get_provider()
 
   result <- list(
     output = list(
@@ -230,7 +249,7 @@ test_that("value_turn handles NULL service_tier gracefully", {
 })
 
 test_that("value_turn() keeps OpenAI citation metadata without grounded_span", {
-  provider <- chat_openai_test()$get_provider()
+  provider <- chat_openai(credentials = \() "key")$get_provider()
   annotation <- list(
     type = "url_citation",
     start_index = 4L,
@@ -265,7 +284,7 @@ test_that("value_turn() keeps OpenAI citation metadata without grounded_span", {
 })
 
 test_that("stream_content() emits OpenAI annotations and web activity", {
-  provider <- chat_openai_test()$get_provider()
+  provider <- chat_openai(credentials = \() "key")$get_provider()
   annotation <- list(
     type = "url_citation",
     start_index = 0L,
@@ -303,7 +322,7 @@ test_that("stream_content() emits OpenAI annotations and web activity", {
 })
 
 test_that("stream_text() excludes OpenAI annotations", {
-  provider <- chat_openai_test()$get_provider()
+  provider <- chat_openai(credentials = \() "key")$get_provider()
   annotation <- list(
     type = "url_citation",
     url = "https://example.com",
@@ -329,7 +348,7 @@ test_that("stream_text() excludes OpenAI annotations", {
 })
 
 test_that("value_turn() handles web_search_call action types", {
-  provider <- chat_openai_test()$get_provider()
+  provider <- chat_openai(credentials = \() "key")$get_provider()
 
   make_result <- function(action) {
     list(
@@ -411,11 +430,48 @@ test_that("can count tokens", {
   test_token_count(chat_openai_test)
 })
 
+test_that("tools and structured output include `strict` only when strict", {
+  tool_def <- tool(
+    function(x, y = 1) x + y,
+    "Add numbers",
+    arguments = list(
+      x = type_number("First"),
+      y = type_number("Second", required = FALSE)
+    )
+  )
+  type <- type_object(x = type_number())
+
+  non_strict <- ProviderOpenAI(name = "", base_url = "")
+  body <- chat_body(
+    non_strict,
+    test_model(),
+    turns = list(),
+    tools = list(tool_def),
+    type = type
+  )
+  expect_null(body$text$format$strict)
+  expect_null(body$tools[[1]]$strict)
+  expect_equal(unlist(body$tools[[1]]$parameters$required), "x")
+
+  strict <- ProviderOpenAI(name = "", base_url = "", strict = TRUE)
+  body <- chat_body(
+    strict,
+    test_model(),
+    turns = list(),
+    tools = list(tool_def),
+    type = type
+  )
+  expect_true(body$text$format$strict)
+  expect_true(body$tools[[1]]$strict)
+  expect_equal(unlist(body$tools[[1]]$parameters$required), c("x", "y"))
+})
+
 test_that("as_json() serializes uploaded file references", {
-  provider <- chat_openai_test()$get_provider()
+  provider <- chat_openai(credentials = \() "key")$get_provider()
   expect_equal(
     as_json(provider, ContentUploaded("file-1", "application/pdf")),
     list(
+      type = "message",
       role = "user",
       content = list(list(type = "input_file", file_id = "file-1"))
     )
@@ -423,10 +479,26 @@ test_that("as_json() serializes uploaded file references", {
   expect_equal(
     as_json(provider, ContentUploaded("file-1", "image/png")),
     list(
+      type = "message",
       role = "user",
       content = list(
         list(type = "input_image", file_id = "file-1", detail = "auto")
       )
     )
   )
+})
+
+test_that("image detail is sent", {
+  provider <- ProviderOpenAI(name = "", base_url = "")
+  image <- content_image_url("https://example.com/image.png", detail = "low")
+  expect_equal(as_json(provider, image)$content[[1]]$detail, "low")
+})
+
+test_that("value_reasoning_tokens() reads reasoning tokens from usage", {
+  provider <- chat_openai(credentials = \() "key")$get_provider()
+  json <- list(
+    usage = list(output_tokens_details = list(reasoning_tokens = 12))
+  )
+  expect_equal(value_reasoning_tokens(provider, json), 12)
+  expect_null(value_reasoning_tokens(provider, list(usage = list())))
 })

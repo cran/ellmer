@@ -10,7 +10,7 @@ vcr::setup_knitr()
 library(ellmer)
 
 ## -----------------------------------------------------------------------------
-chat <- chat_openai(model = "gpt-4.1")
+chat <- chat_openai(model = "gpt-5.4-mini")
 . <- chat$chat("Who created R?", echo = FALSE)
 chat
 

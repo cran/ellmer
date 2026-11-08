@@ -156,6 +156,7 @@ Chat <- R6::R6Class(
     set_model = function(model) {
       check_string(model)
       private$model@name <- model
+      private$provider <- provider_set_model(private$provider, model)
       provider_model(private$provider) <- private$model
       invisible(self)
     },
@@ -195,14 +196,19 @@ Chat <- R6::R6Class(
       }
 
       turns <- self$get_turns()
-      assistant_turns <- keep(turns, is_assistant_turn)
-      complete_turns <- discard(assistant_turns, is_partial_turn)
+      is_complete_turn <- map_lgl(
+        turns,
+        \(turn) is_assistant_turn(turn) && !is_partial_turn(turn)
+      )
+      complete_turns <- turns[is_complete_turn]
       tokens <- map_tokens(complete_turns, \(turn) turn@tokens)
       tokens <- tibble::as_tibble(tokens)
       tokens$cost <- dollars(map_dbl(complete_turns, \(turn) turn@cost))
 
-      user_turns <- keep(turns, is_user_turn)
-      tokens$input_preview <- map_chr(user_turns, turn_contents_preview)
+      # Pair each complete assistant turn with the most recently seen user
+      # turn, rather than assuming turns strictly alternate (#1131).
+      user_idx <- last_user_turn_idx(turns)[is_complete_turn]
+      tokens$input_preview <- map_chr(turns, turn_contents_preview)[user_idx]
       tokens
     },
 
@@ -777,66 +783,86 @@ Chat <- R6::R6Class(
         activate = FALSE,
         conversation_id = private$.conversation_id
       )
+      agent_tally <- new_agent_otel_tally()
+      defer(record_agent_otel(
+        agent_span,
+        private$provider,
+        private$model,
+        agent_tally
+      ))
 
-      while (!is.null(user_turn)) {
-        private$callback_on_request_start$invoke(c(
-          private$.turns,
-          list(user_turn)
-        ))
-        assistant_chunks <- private$submit_turns(
-          user_turn,
-          stream = stream,
-          echo = echo,
-          type = type,
-          yield_as_content = yield_as_content,
-          controller = controller,
-          otel_span = agent_span
-        )
-        for (chunk in assistant_chunks) {
-          yield(chunk)
-        }
-
-        assistant_turn <- self$last_turn()
-        private$callback_on_request_end$invoke(assistant_turn)
-        user_turn <- NULL
-
-        # Don't invoke tools if the stream was cancelled
-        if (controller$cancelled) {
-          break
-        }
-
-        if (turn_has_tool_request(assistant_turn)) {
-          turns <- self$get_turns(include_system_prompt = TRUE)
-          tool_calls <- invoke_tools(
-            assistant_turn,
-            echo = echo,
-            on_tool_request = private$callback_on_tool_request$invoke,
-            on_tool_result = private$callback_on_tool_result$invoke,
-            yield_request = yield_as_content,
-            otel_span = agent_span,
-            tool_context = \(request) new_tool_context(request, turns)
-          )
-
-          tool_results <- list()
-
-          for (tool_step in tool_calls) {
-            if (yield_as_content) {
-              yield(tool_step)
+      tryCatch(
+        {
+          while (!is.null(user_turn)) {
+            private$callback_on_request_start$invoke(c(
+              private$.turns,
+              list(user_turn)
+            ))
+            tally_agent_otel_request(agent_tally)
+            assistant_chunks <- private$submit_turns(
+              user_turn,
+              stream = stream,
+              echo = echo,
+              type = type,
+              yield_as_content = yield_as_content,
+              controller = controller,
+              otel_span = agent_span
+            )
+            for (chunk in assistant_chunks) {
+              yield(chunk)
             }
-            if (is_tool_result(tool_step)) {
-              tool_results <- c(tool_results, list(tool_step))
+
+            assistant_turn <- self$last_turn()
+            tally_agent_otel_turn(agent_tally, assistant_turn)
+            private$callback_on_request_end$invoke(assistant_turn)
+            user_turn <- NULL
+
+            # Don't invoke tools if the stream was cancelled
+            if (controller$cancelled) {
+              agent_tally$error_type <- "cancelled"
+              break
+            }
+
+            if (turn_has_tool_request(assistant_turn)) {
+              turns <- self$get_turns(include_system_prompt = TRUE)
+              tool_calls <- invoke_tools(
+                assistant_turn,
+                echo = echo,
+                on_tool_request = private$callback_on_tool_request$invoke,
+                on_tool_result = private$callback_on_tool_result$invoke,
+                yield_request = yield_as_content,
+                otel_span = agent_span,
+                tool_context = \(request) new_tool_context(request, turns)
+              )
+
+              tool_results <- list()
+
+              for (tool_step in tool_calls) {
+                if (yield_as_content) {
+                  yield(tool_step)
+                }
+                if (is_tool_result(tool_step)) {
+                  tool_results <- c(tool_results, list(tool_step))
+                }
+              }
+
+              user_turn <- tool_results_as_turn(tool_results)
+            }
+
+            if (echo == "all") {
+              cat(format(user_turn))
+            } else if (echo == "none") {
+              tool_errors <- c(tool_errors, turn_get_tool_errors(user_turn))
             }
           }
-
-          user_turn <- tool_results_as_turn(tool_results)
+        },
+        error = function(e) {
+          agent_tally$error_type <- otel_error_type(e)
+          stop(e)
         }
-
-        if (echo == "all") {
-          cat(format(user_turn))
-        } else if (echo == "none") {
-          tool_errors <- c(tool_errors, turn_get_tool_errors(user_turn))
-        }
-      }
+      )
+      agent_tally$completed <- TRUE
+      coro::exhausted()
     }),
 
     # If stream = TRUE, yields completion deltas. If stream = FALSE, yields
@@ -872,82 +898,104 @@ Chat <- R6::R6Class(
         activate = FALSE,
         conversation_id = private$.conversation_id
       )
+      agent_tally <- new_agent_otel_tally()
+      defer(record_agent_otel(
+        agent_span,
+        private$provider,
+        private$model,
+        agent_tally
+      ))
 
-      while (!is.null(user_turn)) {
-        await(private$callback_on_request_start$invoke_async(c(
-          private$.turns,
-          list(user_turn)
-        )))
-        assistant_chunks <- private$submit_turns_async(
-          user_turn,
-          stream = stream,
-          echo = echo,
-          type = type,
-          yield_as_content = yield_as_content,
-          controller = controller,
-          otel_span = agent_span
-        )
-        for (chunk in await_each(assistant_chunks)) {
-          yield(chunk)
-        }
-
-        assistant_turn <- self$last_turn()
-        await(private$callback_on_request_end$invoke_async(assistant_turn))
-        user_turn <- NULL
-
-        # Don't invoke tools if the stream was cancelled
-        if (controller$cancelled) {
-          break
-        }
-
-        if (turn_has_tool_request(assistant_turn)) {
-          turns <- self$get_turns(include_system_prompt = TRUE)
-          tool_calls <- invoke_tools_async(
-            assistant_turn,
-            echo = echo,
-            on_tool_request = private$callback_on_tool_request$invoke_async,
-            on_tool_result = private$callback_on_tool_result$invoke_async,
-            yield_request = yield_as_content,
-            otel_span = agent_span,
-            tool_context = \(request) new_tool_context(request, turns)
-          )
-          if (tool_mode == "sequential") {
-            tool_results <- list()
-            for (tool_step in await_each(tool_calls)) {
-              if (yield_as_content) {
-                yield(tool_step)
-              }
-              if (is_tool_result(tool_step)) {
-                tool_results <- c(tool_results, list(tool_step))
-              }
+      tryCatch(
+        {
+          while (!is.null(user_turn)) {
+            await(private$callback_on_request_start$invoke_async(c(
+              private$.turns,
+              list(user_turn)
+            )))
+            tally_agent_otel_request(agent_tally)
+            assistant_chunks <- private$submit_turns_async(
+              user_turn,
+              stream = stream,
+              echo = echo,
+              type = type,
+              yield_as_content = yield_as_content,
+              controller = controller,
+              otel_span = agent_span
+            )
+            for (chunk in await_each(assistant_chunks)) {
+              yield(chunk)
             }
-          } else {
-            tool_results <- coro::collect(tool_calls)
-            if (yield_as_content) {
-              # Filter out and yield tool requests before awaiting tool results
-              is_request <- map_lgl(tool_results, is_tool_request)
-              for (tool_step in tool_results[is_request]) {
-                yield(tool_step)
-              }
-              tool_results <- tool_results[!is_request]
+
+            assistant_turn <- self$last_turn()
+            tally_agent_otel_turn(agent_tally, assistant_turn)
+            await(private$callback_on_request_end$invoke_async(assistant_turn))
+            user_turn <- NULL
+
+            # Don't invoke tools if the stream was cancelled
+            if (controller$cancelled) {
+              agent_tally$error_type <- "cancelled"
+              break
             }
-            tool_results <- await(promises::promise_all(.list = tool_results))
-            if (yield_as_content) {
-              for (tool_result in tool_results) {
-                yield(tool_result)
+
+            if (turn_has_tool_request(assistant_turn)) {
+              turns <- self$get_turns(include_system_prompt = TRUE)
+              tool_calls <- invoke_tools_async(
+                assistant_turn,
+                echo = echo,
+                on_tool_request = private$callback_on_tool_request$invoke_async,
+                on_tool_result = private$callback_on_tool_result$invoke_async,
+                yield_request = yield_as_content,
+                otel_span = agent_span,
+                tool_context = \(request) new_tool_context(request, turns)
+              )
+              if (tool_mode == "sequential") {
+                tool_results <- list()
+                for (tool_step in await_each(tool_calls)) {
+                  if (yield_as_content) {
+                    yield(tool_step)
+                  }
+                  if (is_tool_result(tool_step)) {
+                    tool_results <- c(tool_results, list(tool_step))
+                  }
+                }
+              } else {
+                tool_results <- coro::collect(tool_calls)
+                if (yield_as_content) {
+                  # Filter out and yield tool requests before awaiting tool results
+                  is_request <- map_lgl(tool_results, is_tool_request)
+                  for (tool_step in tool_results[is_request]) {
+                    yield(tool_step)
+                  }
+                  tool_results <- tool_results[!is_request]
+                }
+                tool_results <- await(promises::promise_all(
+                  .list = tool_results
+                ))
+                if (yield_as_content) {
+                  for (tool_result in tool_results) {
+                    yield(tool_result)
+                  }
+                }
               }
+
+              user_turn <- tool_results_as_turn(tool_results)
+            }
+
+            if (echo == "all") {
+              cat(format(user_turn))
+            } else if (echo == "none") {
+              tool_errors <- c(tool_errors, turn_get_tool_errors(user_turn))
             }
           }
-
-          user_turn <- tool_results_as_turn(tool_results)
+        },
+        error = function(e) {
+          agent_tally$error_type <- otel_error_type(e)
+          stop(e)
         }
-
-        if (echo == "all") {
-          cat(format(user_turn))
-        } else if (echo == "none") {
-          tool_errors <- c(tool_errors, turn_get_tool_errors(user_turn))
-        }
-      }
+      )
+      agent_tally$completed <- TRUE
+      coro::exhausted()
     }),
 
     # If stream = TRUE, yields completion deltas. If stream = FALSE, yields
@@ -975,109 +1023,202 @@ Chat <- R6::R6Class(
         turns = otel_input$turns,
         system_prompt = otel_input$system_prompt,
         parent = otel_span,
-        conversation_id = private$.conversation_id
-      )
-
-      response <- chat_perform(
-        provider = private$provider,
-        model = private$model,
-        mode = if (stream) "stream" else "value",
-        turns = request_turns,
-        tools = if (is.null(type)) private$tools,
+        conversation_id = private$.conversation_id,
+        stream = stream,
         type = type,
-        controller = controller,
-        otel_span = chat_span
+        tools = if (is.null(type)) private$tools
       )
 
-      emit <- emitter(echo)
-      any_text <- FALSE
-      echo_ends_with_newline <- TRUE
-      citation_sources <- list()
-      turn <- NULL
-      acc <- TurnAccumulator$new(
-        self,
-        private,
-        controller,
-        turns = request_turns
-      )
+      request_start <- Sys.time()
+      # Covers unwinds that no handler sees (e.g. a keyboard interrupt).
+      defer(record_chat_otel_span_interrupted(
+        chat_span,
+        private$provider,
+        private$model,
+        request_start
+      ))
+      tryCatch(
+        {
+          # Parameters the provider doesn't support are dropped from the
+          # request (with a warning); omit them from the span too.
+          unsupported_params <- character()
+          response <- withCallingHandlers(
+            chat_perform(
+              provider = private$provider,
+              model = private$model,
+              mode = if (stream) "stream" else "value",
+              turns = request_turns,
+              tools = if (is.null(type)) private$tools,
+              type = type,
+              controller = controller,
+              otel_span = chat_span
+            ),
+            ellmer_unsupported_params = function(w) {
+              unsupported_params <<- union(unsupported_params, w$unknown)
+            }
+          )
+          for (span in list(chat_span, otel_span)) {
+            record_otel_span_request_params(
+              span,
+              private$model,
+              unsupported_params
+            )
+          }
 
-      if (stream) {
-        acc$begin_turn(user_turn)
-        on.exit(acc$finalize_turn(), add = TRUE)
-
-        result <- NULL
-        for (chunk in response) {
-          result <- stream_merge_chunks(private$provider, result, chunk)
-          contents <- stream_content_with_turns(
-            private$provider,
-            chunk,
-            result,
+          emit <- emitter(echo)
+          any_text <- FALSE
+          echo_ends_with_newline <- TRUE
+          citation_sources <- list()
+          turn <- NULL
+          acc <- TurnAccumulator$new(
+            self,
+            private,
+            controller,
             turns = request_turns
           )
-          for (content in contents) {
-            text <- content_text(content)
-            if (yield_as_content) {
-              yield(content)
-            } else if (is_stream_text_content(content)) {
-              yield(text)
+
+          if (stream) {
+            acc$begin_turn(user_turn)
+            on.exit(acc$finalize_turn(), add = TRUE)
+
+            stream_start <- request_start
+            last_chunk_time <- NULL
+            result <- NULL
+            for (chunk in response) {
+              result <- stream_merge_chunks(private$provider, result, chunk)
+              contents <- stream_content_with_turns(
+                private$provider,
+                chunk,
+                result,
+                turns = request_turns
+              )
+              if (!is.null(stream_start)) {
+                record_chat_otel_ttft(
+                  chat_span,
+                  private$provider,
+                  private$model,
+                  stream_start
+                )
+                stream_start <- NULL
+              } else {
+                record_chat_otel_chunk(
+                  private$provider,
+                  private$model,
+                  last_chunk_time
+                )
+              }
+              # Taken after the chunk is merged but before its contents are
+              # yielded; consecutive timestamps give the interval between
+              # chunk arrivals, including any consumer time between pulls.
+              last_chunk_time <- Sys.time()
+              for (content in contents) {
+                text <- content_text(content)
+                if (yield_as_content) {
+                  yield(content)
+                } else if (is_stream_text_content(content)) {
+                  yield(text)
+                }
+                acc$update_turn(content)
+                if (is_stream_text_content(content)) {
+                  any_text <- TRUE
+                }
+                if (S7_inherits(content, ContentText)) {
+                  emit(text)
+                  if (!identical(text, "")) {
+                    echo_ends_with_newline <- endsWith(text, "\n")
+                  }
+                } else if (S7_inherits(content, ContentCitation)) {
+                  recorded <- record_citation_source(citation_sources, content)
+                  citation_sources <- recorded$sources
+                  if (!is.null(recorded$number)) {
+                    emit(paste0("[", recorded$number, "]"))
+                    echo_ends_with_newline <- FALSE
+                  }
+                }
+              }
             }
-            acc$update_turn(content)
-            if (is_stream_text_content(content)) {
-              any_text <- TRUE
+
+            error_type <- NULL
+            if (controller$cancelled) {
+              error_type <- "cancelled"
             }
-            if (S7_inherits(content, ContentText)) {
+            record_chat_otel_span_response(
+              chat_span,
+              private$provider,
+              private$model,
+              result
+            )
+            turn <- acc$complete_turn(result, type = type)
+            if (controller$cancelled) {
+              turn <- self$last_turn()
+            }
+            record_chat_otel_duration(
+              private$provider,
+              private$model,
+              request_start,
+              error_type = error_type,
+              result = result
+            )
+            request_start <- NULL # duration recorded; skip in error handler and defer
+            record_chat_otel_span_output(chat_span, turn)
+            record_chat_otel_span_status(chat_span, error_type)
+          } else {
+            result <- resp_body_json(response)
+            duration <- resp_timing(response)[["total"]] %||% NA_real_
+            record_chat_otel_span_response(
+              chat_span,
+              private$provider,
+              private$model,
+              result
+            )
+            turn <- acc$add_turn(user_turn, result, duration, type = type)
+            record_chat_otel_duration(
+              private$provider,
+              private$model,
+              request_start,
+              result = result
+            )
+            request_start <- NULL # duration recorded; skip in error handler and defer
+            record_chat_otel_span_output(chat_span, turn)
+            record_chat_otel_span_status(chat_span)
+
+            text <- turn@text
+            if (!is.null(text)) {
               emit(text)
+              any_text <- TRUE
               if (!identical(text, "")) {
                 echo_ends_with_newline <- endsWith(text, "\n")
               }
-            } else if (S7_inherits(content, ContentCitation)) {
-              recorded <- record_citation_source(citation_sources, content)
-              citation_sources <- recorded$sources
-              if (!is.null(recorded$number)) {
-                emit(paste0("[", recorded$number, "]"))
-                echo_ends_with_newline <- FALSE
+              if (yield_as_content) {
+                yield(ContentText(text))
+              } else {
+                yield(text)
+              }
+            }
+            for (content in turn@contents) {
+              if (S7_inherits(content, ContentCitation)) {
+                recorded <- record_citation_source(citation_sources, content)
+                citation_sources <- recorded$sources
+                if (!is.null(recorded$number)) {
+                  emit(paste0("[", recorded$number, "]"))
+                  echo_ends_with_newline <- FALSE
+                }
               }
             }
           }
+        },
+        error = function(e) {
+          record_chat_otel_span_error(
+            chat_span,
+            private$provider,
+            private$model,
+            e,
+            request_start
+          )
+          request_start <<- NULL
+          stop(e)
         }
-
-        record_chat_otel_span_status(chat_span, private$provider, result)
-        turn <- acc$complete_turn(result, type = type)
-        if (controller$cancelled) {
-          turn <- self$last_turn()
-        }
-        record_chat_otel_span_output(chat_span, turn)
-      } else {
-        result <- resp_body_json(response)
-        duration <- resp_timing(response)[["total"]] %||% NA_real_
-        record_chat_otel_span_status(chat_span, private$provider, result)
-        turn <- acc$add_turn(user_turn, result, duration, type = type)
-        record_chat_otel_span_output(chat_span, turn)
-
-        text <- turn@text
-        if (!is.null(text)) {
-          emit(text)
-          any_text <- TRUE
-          if (!identical(text, "")) {
-            echo_ends_with_newline <- endsWith(text, "\n")
-          }
-          if (yield_as_content) {
-            yield(ContentText(text))
-          } else {
-            yield(text)
-          }
-        }
-        for (content in turn@contents) {
-          if (S7_inherits(content, ContentCitation)) {
-            recorded <- record_citation_source(citation_sources, content)
-            citation_sources <- recorded$sources
-            if (!is.null(recorded$number)) {
-              emit(paste0("[", recorded$number, "]"))
-              echo_ends_with_newline <- FALSE
-            }
-          }
-        }
-      }
+      )
 
       if (!is.null(turn)) {
         if (!echo_ends_with_newline) {
@@ -1136,110 +1277,203 @@ Chat <- R6::R6Class(
         turns = otel_input$turns,
         system_prompt = otel_input$system_prompt,
         parent = otel_span,
-        conversation_id = private$.conversation_id
-      )
-
-      response <- chat_perform(
-        provider = private$provider,
-        model = private$model,
-        mode = if (stream) "async-stream" else "async-value",
-        turns = request_turns,
-        tools = if (is.null(type)) private$tools,
+        conversation_id = private$.conversation_id,
+        stream = stream,
         type = type,
-        controller = controller,
-        otel_span = chat_span
+        tools = if (is.null(type)) private$tools
       )
 
-      emit <- emitter(echo)
-      any_text <- FALSE
-      echo_ends_with_newline <- TRUE
-      citation_sources <- list()
-      turn <- NULL
-      acc <- TurnAccumulator$new(
-        self,
-        private,
-        controller,
-        turns = request_turns
-      )
+      request_start <- Sys.time()
+      # Covers unwinds that no handler sees (e.g. a keyboard interrupt).
+      defer(record_chat_otel_span_interrupted(
+        chat_span,
+        private$provider,
+        private$model,
+        request_start
+      ))
+      tryCatch(
+        {
+          # Parameters the provider doesn't support are dropped from the
+          # request (with a warning); omit them from the span too.
+          unsupported_params <- character()
+          response <- withCallingHandlers(
+            chat_perform(
+              provider = private$provider,
+              model = private$model,
+              mode = if (stream) "async-stream" else "async-value",
+              turns = request_turns,
+              tools = if (is.null(type)) private$tools,
+              type = type,
+              controller = controller,
+              otel_span = chat_span
+            ),
+            ellmer_unsupported_params = function(w) {
+              unsupported_params <<- union(unsupported_params, w$unknown)
+            }
+          )
+          for (span in list(chat_span, otel_span)) {
+            record_otel_span_request_params(
+              span,
+              private$model,
+              unsupported_params
+            )
+          }
 
-      if (stream) {
-        acc$begin_turn(user_turn)
-        on.exit(acc$finalize_turn(), add = TRUE)
-
-        result <- NULL
-        for (chunk in await_each(response)) {
-          result <- stream_merge_chunks(private$provider, result, chunk)
-          contents <- stream_content_with_turns(
-            private$provider,
-            chunk,
-            result,
+          emit <- emitter(echo)
+          any_text <- FALSE
+          echo_ends_with_newline <- TRUE
+          citation_sources <- list()
+          turn <- NULL
+          acc <- TurnAccumulator$new(
+            self,
+            private,
+            controller,
             turns = request_turns
           )
-          for (content in contents) {
-            text <- content_text(content)
-            if (yield_as_content) {
-              yield(content)
-            } else if (is_stream_text_content(content)) {
-              yield(text)
+
+          if (stream) {
+            acc$begin_turn(user_turn)
+            on.exit(acc$finalize_turn(), add = TRUE)
+
+            stream_start <- request_start
+            last_chunk_time <- NULL
+            result <- NULL
+            for (chunk in await_each(response)) {
+              result <- stream_merge_chunks(private$provider, result, chunk)
+              contents <- stream_content_with_turns(
+                private$provider,
+                chunk,
+                result,
+                turns = request_turns
+              )
+              if (!is.null(stream_start)) {
+                record_chat_otel_ttft(
+                  chat_span,
+                  private$provider,
+                  private$model,
+                  stream_start
+                )
+                stream_start <- NULL
+              } else {
+                record_chat_otel_chunk(
+                  private$provider,
+                  private$model,
+                  last_chunk_time
+                )
+              }
+              # Taken after the chunk is merged but before its contents are
+              # yielded; consecutive timestamps give the interval between
+              # chunk arrivals, including any consumer time between pulls.
+              last_chunk_time <- Sys.time()
+              for (content in contents) {
+                text <- content_text(content)
+                if (yield_as_content) {
+                  yield(content)
+                } else if (is_stream_text_content(content)) {
+                  yield(text)
+                }
+                acc$update_turn(content)
+                if (is_stream_text_content(content)) {
+                  any_text <- TRUE
+                }
+                if (S7_inherits(content, ContentText)) {
+                  emit(text)
+                  if (!identical(text, "")) {
+                    echo_ends_with_newline <- endsWith(text, "\n")
+                  }
+                } else if (S7_inherits(content, ContentCitation)) {
+                  recorded <- record_citation_source(citation_sources, content)
+                  citation_sources <- recorded$sources
+                  if (!is.null(recorded$number)) {
+                    emit(paste0("[", recorded$number, "]"))
+                    echo_ends_with_newline <- FALSE
+                  }
+                }
+              }
             }
-            acc$update_turn(content)
-            if (is_stream_text_content(content)) {
-              any_text <- TRUE
+
+            error_type <- NULL
+            if (controller$cancelled) {
+              error_type <- "cancelled"
             }
-            if (S7_inherits(content, ContentText)) {
+            record_chat_otel_span_response(
+              chat_span,
+              private$provider,
+              private$model,
+              result
+            )
+            turn <- acc$complete_turn(result, type = type)
+            if (controller$cancelled) {
+              turn <- self$last_turn()
+            }
+            record_chat_otel_duration(
+              private$provider,
+              private$model,
+              request_start,
+              error_type = error_type,
+              result = result
+            )
+            request_start <- NULL # duration recorded; skip in error handler and defer
+            record_chat_otel_span_output(chat_span, turn)
+            record_chat_otel_span_status(chat_span, error_type)
+          } else {
+            response <- await(response)
+            result <- resp_body_json(response)
+            duration <- resp_timing(response)[["total"]] %||% NA_real_
+            record_chat_otel_span_response(
+              chat_span,
+              private$provider,
+              private$model,
+              result
+            )
+            turn <- acc$add_turn(user_turn, result, duration, type = type)
+            record_chat_otel_duration(
+              private$provider,
+              private$model,
+              request_start,
+              result = result
+            )
+            request_start <- NULL # duration recorded; skip in error handler and defer
+            record_chat_otel_span_output(chat_span, turn)
+            record_chat_otel_span_status(chat_span)
+
+            text <- turn@text
+            if (!is.null(text)) {
               emit(text)
+              any_text <- TRUE
               if (!identical(text, "")) {
                 echo_ends_with_newline <- endsWith(text, "\n")
               }
-            } else if (S7_inherits(content, ContentCitation)) {
-              recorded <- record_citation_source(citation_sources, content)
-              citation_sources <- recorded$sources
-              if (!is.null(recorded$number)) {
-                emit(paste0("[", recorded$number, "]"))
-                echo_ends_with_newline <- FALSE
+              if (yield_as_content) {
+                yield(ContentText(text))
+              } else {
+                yield(text)
+              }
+            }
+            for (content in turn@contents) {
+              if (S7_inherits(content, ContentCitation)) {
+                recorded <- record_citation_source(citation_sources, content)
+                citation_sources <- recorded$sources
+                if (!is.null(recorded$number)) {
+                  emit(paste0("[", recorded$number, "]"))
+                  echo_ends_with_newline <- FALSE
+                }
               }
             }
           }
+        },
+        error = function(e) {
+          record_chat_otel_span_error(
+            chat_span,
+            private$provider,
+            private$model,
+            e,
+            request_start
+          )
+          request_start <<- NULL
+          stop(e)
         }
-
-        record_chat_otel_span_status(chat_span, private$provider, result)
-        turn <- acc$complete_turn(result, type = type)
-        if (controller$cancelled) {
-          turn <- self$last_turn()
-        }
-        record_chat_otel_span_output(chat_span, turn)
-      } else {
-        response <- await(response)
-        result <- resp_body_json(response)
-        duration <- resp_timing(response)[["total"]] %||% NA_real_
-        record_chat_otel_span_status(chat_span, private$provider, result)
-        turn <- acc$add_turn(user_turn, result, duration, type = type)
-        record_chat_otel_span_output(chat_span, turn)
-
-        text <- turn@text
-        if (!is.null(text)) {
-          emit(text)
-          any_text <- TRUE
-          if (!identical(text, "")) {
-            echo_ends_with_newline <- endsWith(text, "\n")
-          }
-          if (yield_as_content) {
-            yield(ContentText(text))
-          } else {
-            yield(text)
-          }
-        }
-        for (content in turn@contents) {
-          if (S7_inherits(content, ContentCitation)) {
-            recorded <- record_citation_source(citation_sources, content)
-            citation_sources <- recorded$sources
-            if (!is.null(recorded$number)) {
-              emit(paste0("[", recorded$number, "]"))
-              echo_ends_with_newline <- FALSE
-            }
-          }
-        }
-      }
+      )
 
       if (!is.null(turn)) {
         if (!echo_ends_with_newline) {

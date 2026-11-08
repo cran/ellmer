@@ -73,7 +73,8 @@ chat_databricks <- function(
     name = "Databricks",
     base_url = workspace,
     credentials = credentials,
-    extra_headers = api_headers
+    extra_headers = api_headers,
+    strict = FALSE
   )
   model <- Model(name = model, params = params, extra_args = api_args)
   Chat$new(
@@ -233,25 +234,6 @@ method(base_request_error, ProviderDatabricks) <- function(provider, req) {
       resp_body_json(resp)$message
     }
   })
-}
-
-# See: https://docs.databricks.com/aws/en/machine-learning/foundation-model-apis/api-reference#functionobject
-method(as_json, list(ProviderDatabricks, ToolDef)) <- function(
-  provider,
-  x,
-  ...
-) {
-  # Same as ProviderOpenAICompatible but without `strict`: Databricks accepts
-  # it, but large tool sets then fail with "Compiled grammar size exceeds
-  # maximum allowed size" (#548). `parameters` must always be sent (#1084).
-  compact(list(
-    type = "function",
-    "function" = compact(list(
-      name = x@name,
-      description = x@description,
-      parameters = as_json(provider, x@arguments, ...)
-    ))
-  ))
 }
 
 # https://docs.databricks.com/aws/en/machine-learning/foundation-model-apis/api-reference#toolcall
@@ -420,8 +402,13 @@ default_databricks_credentials <- function(workspace = databricks_workspace()) {
 is_hosted_session <- function() {
   # If RStudio Server or Posit Workbench is running locally (which is possible,
   # though unusual), it's not acting as a hosted environment.
-  Sys.getenv("RSTUDIO_PROGRAM_MODE") == "server" &&
+  is_rstudio_server <- Sys.getenv("RSTUDIO_PROGRAM_MODE") == "server" &&
     !grepl("localhost", Sys.getenv("RSTUDIO_HTTP_REFERER"), fixed = TRUE)
+
+  is_rstudio_server ||
+    nzchar(Sys.getenv("RS_SERVER_URL")) ||
+    Sys.getenv("POSITRON_MODE") == "server" ||
+    nzchar(Sys.getenv("COLAB_RELEASE_TAG"))
 }
 
 databricks_cli_token <- function(cli_path, host) {

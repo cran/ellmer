@@ -99,13 +99,13 @@ NULL
 #'   Not supported when `api = "responses"`, which caches automatically.
 #'
 #'   See details below.
-#' @param model `r param_model("us.anthropic.claude-sonnet-5", "models_aws_bedrock")`.
+#' @param model `r param_model("us.anthropic.claude-sonnet-5-5", "models_aws_bedrock")`.
 #'
 #'   While ellmer provides a default model, there's no guarantee that you'll
 #'   have access to it, so you'll need to specify a model that you can.
 #'   If you're using [cross-region inference](https://aws.amazon.com/blogs/machine-learning/getting-started-with-cross-region-inference-in-amazon-bedrock/),
 #'   you'll need to use the inference profile ID, e.g.
-#'   `model="us.anthropic.claude-sonnet-5"`.
+#'   `model="us.anthropic.claude-sonnet-5-5"`.
 #' @param params Common model parameters, usually created by [params()].
 #' @param api_args Named list of arbitrary extra arguments appended to the body
 #'   of every chat API call. Use `params` for common parameters. Model-specific
@@ -116,10 +116,16 @@ NULL
 #'   ```R
 #'   api_args = list(
 #'     additionalModelRequestFields = list(
-#'       thinking = list(type = "enabled", budget_tokens = 4000)
+#'       thinking = list(type = "adaptive"),
+#'       output_config = list(effort = "high")
 #'     )
 #'   )
 #'   ```
+#'
+#'   The example above uses adaptive thinking, which is what current Claude
+#'   models expect. Older models (before Claude Opus 4.6 and Sonnet 4.6) don't
+#'   support it; for those, set a fixed budget instead with
+#'   `thinking = list(type = "enabled", budget_tokens = 4000)`.
 #'
 #'   See <https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference-call.html>
 #'   for more details.
@@ -159,7 +165,7 @@ chat_aws_bedrock <- function(
   echo <- check_echo(echo)
 
   params <- params %||% params()
-  model <- set_default(model, "us.anthropic.claude-sonnet-5")
+  model <- set_default(model, "us.anthropic.claude-sonnet-5-5")
 
   provider <- provider_aws_bedrock(
     base_url = base_url,
@@ -228,7 +234,7 @@ provider_aws_bedrock <- function(
   base_url <- base_url %||% aws_bedrock_base_url(api, region)
 
   # Each API expresses caching differently, or not at all
-  cache_args <- switch(
+  api_args <- switch(
     api,
     converse = list(
       cache_point = as_bedrock_cache_point(cache, model %||% "")
@@ -236,7 +242,7 @@ provider_aws_bedrock <- function(
     messages = list(cache = as_bedrock_message_cache(cache)),
     responses = {
       check_bedrock_no_cache(cache, error_call = error_call)
-      list()
+      list(strict = TRUE)
     }
   )
 
@@ -248,7 +254,7 @@ provider_aws_bedrock <- function(
     region = region,
     creds_cache = creds_cache,
     extra_headers = extra_headers,
-    !!!cache_args
+    !!!api_args
   ))
 }
 
@@ -473,12 +479,7 @@ method(chat_request, ProviderAWSBedrock) <- function(
   }))
 
   if (!is.null(type)) {
-    tool_def <- ToolDef(
-      function(...) {},
-      name = "structured_tool_call__",
-      description = "Extract structured data",
-      arguments = type_object(data = type)
-    )
+    tool_def <- structured_output_tool(provider, type)
     tools[[tool_def@name]] <- tool_def
     tool_choice <- list(tool = list(name = tool_def@name))
   } else {
@@ -543,6 +544,13 @@ method(stream_content, ProviderAWSBedrock) <- function(
     return(list(ContentText(text)))
   }
   list()
+}
+
+method(structured_output_tool, ProviderAWSBedrock) <- function(
+  provider,
+  type
+) {
+  new_structured_output_tool("structured_tool_call__", type)
 }
 
 method(stream_merge_chunks, ProviderAWSBedrock) <- function(
@@ -869,6 +877,12 @@ method(as_json, list(ProviderAWSBedrock, ContentThinking)) <- function(
 ) {
   if (identical(x@thinking, "")) {
     return()
+  }
+
+  if (is.null(x@extra$signature) || !nzchar(x@extra$signature)) {
+    # Unsigned thinking blocks are rejected by Bedrock, so replay thinking
+    # from other providers as plain text.
+    return(as_json(provider, ContentText(format(x)), ...))
   }
 
   list(

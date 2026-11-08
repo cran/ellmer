@@ -3,8 +3,8 @@ http_interactions:
     method: POST
     uri: https://api.openai.com/v1/responses
     body:
-      string: '{"input":[{"role":"user","content":[{"type":"input_text","text":"The
-        new quantum computing breakthrough could revolutionize the tech industry."}]}],"include":["reasoning.encrypted_content"],"model":"gpt-5.6-terra","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"wrapper":{"type":"array","description":"Array
+      string: '{"input":[{"type":"message","role":"user","content":[{"type":"input_text","text":"The
+        new quantum computing breakthrough could revolutionize the tech industry."}]}],"include":["reasoning.encrypted_content"],"model":"gpt-6.1-terra","stream":false,"text":{"format":{"type":"json_schema","name":"structured_data","schema":{"type":"object","description":"","properties":{"wrapper":{"type":"array","description":"Array
         of classification results. The scores should sum to 1.","items":{"type":"object","description":"","properties":{"name":{"type":"string","description":"The
         category name","enum":["Politics","Sports","Technology","Entertainment","Business","Other"]},"score":{"type":"number","description":"The
         classification score for the category, ranging from 0.0 to 1.0."}},"required":["name","score"],"additionalProperties":false}}},"required":["wrapper"],"additionalProperties":false},"strict":true}},"store":false,"service_tier":"auto"}'
@@ -12,62 +12,65 @@ http_interactions:
     status: 200
     headers:
       access-control-expose-headers:
-      - X-Request-ID
+      - X-Request-ID, Server-Timing-Total
       - CF-Ray
       - CF-Ray
       alt-svc: h3=":443"; ma=86400
       cf-cache-status: DYNAMIC
-      cf-ray: a2508c0f4c3acdf0-EWR
+      cf-ray: a545ecd47d00cc1d-LHR
       content-encoding: br
       content-type: application/json
-      date: Sun, 02 Aug 2026 22:33:59 GMT
+      date: Mon, 02 Nov 2026 20:35:22 GMT
       openai-organization: user-k8m6yzpx9oqbrzisf5xeeeap
-      openai-processing-ms: '3082'
+      openai-processing-ms: '1702'
       openai-project: proj_1zyW3RxIpA38KxiYN69dBj4g
       openai-version: '2020-10-01'
       server: cloudflare
-      set-cookie: __cf_bm=3Xi7mKkphNfaUFy4vcwMoH_3YqqbvFSwQrGdMfvGy.Q-1785710036.3680232-1.0.1.1-DuKxB39L3A7R__qqULb4uKz8fcRtA9TS6ouEZ0GgY3CsRWNZ_0ARmFglT.TwTsqGZPPh3TPMVa48IVvu2biUtPHmF2VXUo.RkM6_g92R3_dYgclA5iAVW6dssW6UR9QB;
-        HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Sun,
-        02 Aug 2026 23:03:59 GMT
+      set-cookie: __cf_bm=mgBC5qi.Sucbmttiw92foMm8N0l3Y4lt921T7uMeGJE-1793651720.3995035-1.0.1.1-vnzJ3KmLb5JOQdvvmoUuprOo_GowG4nqn2zrgGzbHnbrxa.4GGZhvPrtpOXgL2Yb478QhwkCx3LaK3xhjpIQKZUfapIpYpKxh17t8cqqGUpkwG7JuwvUbWg9Mf.mQcUU;
+        HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com; Expires=Mon,
+        02 Nov 2026 21:05:22 GMT
       strict-transport-security: max-age=31536000; includeSubDomains; preload
       x-content-type-options: nosniff
-      x-ratelimit-limit-requests: '500'
-      x-ratelimit-limit-tokens: '500000'
-      x-ratelimit-remaining-requests: '499'
-      x-ratelimit-remaining-tokens: '500000'
-      x-ratelimit-reset-requests: 120ms
+      x-ratelimit-limit-requests: '5000'
+      x-ratelimit-limit-tokens: '1000000'
+      x-ratelimit-remaining-requests: '4999'
+      x-ratelimit-remaining-tokens: '1000000'
+      x-ratelimit-reset-requests: 12ms
       x-ratelimit-reset-tokens: 0s
-      x-request-id: req_f29b1acf29984473a5b21a8269e27459
+      x-request-id: req_308287670fef403c886faa6028a13577
     body:
       string: |-
         {
-          "id": "resp_0fe7ccbc60dd3b52016a6fc5d47db88195a6967b3c61a4e707",
+          "id": "resp_00399d147c766612016ae8f4087a7887d29bdf0dfa494c2c94",
           "object": "response",
-          "created_at": 1785710036,
+          "created_at": 1793651720,
           "status": "completed",
+          "access_programs": {
+            "cyber": "standard"
+          },
           "background": false,
           "billing": {
             "payer": "developer"
           },
-          "completed_at": 1785710039,
+          "completed_at": 1793651722,
           "error": null,
           "frequency_penalty": 0.0,
           "incomplete_details": null,
           "instructions": null,
           "max_output_tokens": null,
           "max_tool_calls": null,
-          "model": "gpt-5.6-terra",
+          "model": "gpt-6.1-terra",
           "moderation": null,
           "output": [
             {
-              "id": "rs_0fe7ccbc60dd3b52016a6fc5d4fc0c8195806c33cf0b336228",
+              "id": "rs_00399d147c766612016ae8f409268487d2a7446cca61cf37ca",
               "type": "reasoning",
               "content": [],
-              "encrypted_content": "gAAAAABqb8XXUx_R1AVTMu8bV51tH1TS83eapwu6haNxEfMKFr7vo_jUftZCxWx2dOyrd67Sw95KhBZwsUCLrVsHcVSMjGD-Moo4CCvdpoGj1kg1Kue5txxtP3LCc9fEh61XYAgjqu5ThGqSCS2rRrf9xlxRDkrmvZCG0mGUfY6KYzCIRw2oMIc7ldBMuAAOtc9vZEuZB6XwtyVaHKxnJOFURPcxnh0ac7-KRFLceHBT6E4BVUALip_OqYvZUVK5tLBcc0-II6YG41tXFbUZlGBm1qxgniotdc0TwDunoW7xmrYEdVayWJ9hKsnGfv2ZVETQZY3DFoL66St1-mHnQmAvAzG1xjquBp2igFcDoZ-Em1WrhXGxsl6MnfSAq23fWtzFkfX2wQpAcqZPNeYp77N7kxaTnbF2Vbnilh9rmd_HrxZd_VNW9ASC2i4bE3_tXWy-hAhq5l2dxjxQ-rzIJHo08OquozMP26HGpaE302B7HDrszq-56SJ1fI83MHZcaKrPmwIjQPHYWxwGnL8Yd7NNXQi0nOfnBsKgZ-TIoqn7Y2zm3HJpNbCj2OqIB3yTtkp27BKdVAFt8nFLPGbR5BI-XfSLVq5LizdRBdEkc9DiPBmXrwPw-hmZRR482smwOcWuaVMkRe8r4Ss0MfJh92ZVM3GDp5MzpDwd5YLMR9O5em_YOmQuYuoIi8AwWg3ydyv7T8DJSY93IE4eeCTnmskBRrnP6RwyQphscJ0OPEK7HotHMP0nXnm1Lc-TSv0AVzG1R4lXh2QnFptQl4t_mwawaPSaw-rXCP9CLY7-my3sdTRJ7Iv2Zq_iPr16pOY7xF8yUn1tktR5cc-09EvXA2TlJT7HDNAPsxisBaj8WtnaFZXc2ExLZnbULf0tonpR_n5yZ_Ju6WLAm1G3kBJIJZxeS7oAr0l-dqoL3DILmBYV_v3D6ZkJPgNTdLAuga6A4oPtgK-yRc-LgliNlGy9NOZ8uVbK4vVQHskAr_SyrqU22EWXHZw2sLJPpgXxJaslLUQ66wsU7Pk_wPps7WQKgN-3PUV3KGKi2g==",
+              "encrypted_content": "gAAAAABq6PQKt3n7HUIHNwhuwf-S8DvnThCgYAvq32ygcxOHc__B7Yk3BZ4CFxI34zxW0nzcCUbt_xR42K6NR-LdcSBuGeNyGGhrZE9J_B5nqVNKkeZNcTUxxjLM1528xfbOwKis1ncnobWs3128hQ-6ium-dtVi7ZLWAk2hVhAthM_Kss5cpY5v1bHcSuvjtVFDoNVjj65vKzBJCEkj2R2Ms3Ew-oIM-qEzXkR3Qao7RjzpPN1O8sKt05ZOrAKEtRhkDyiKByosythxhz8-sTa9z30kUWFiaJeoa-Y78yNA_2tKKp2EVfitHYlGuuGp2A6bAWVmtmYyptPnONTcOneLKxb0SITxAjw4E9gOlkPBFdT2Y2AfL26Mmb28x7ulg-1XYOffMJqIJ8hEiTBhDe3WYXBYyTlDEgV9gV85v3BUaM2L-7nUIqeyM1KPVo0iJs8OLLE5T0fquQwFs7C3jf4fR9bcry5eUp3c5NBbUBMekuIo6Jor23acV03ieb-5PZCMAT914VMxeo73Oxm2Ul-8EfFOnaHv8d98ItBTHik-ASmSI116dENjG9s15uc_MAafLQgs6Fj3yCgSsORdwCAXYFOGbU9jqAKOiiwGKUxa-5XbNckhfOqgW4G0uSmSzagEz6VtXDQLdZWhMW_mwLrgXkueQ8N4RJnKD4CXuJpL9Bcbli3dMJe98Zv02rjcFLkPU-byjU8Ym8q-mlF7eXwe_wUQPhyzO2ZbWopuMciueXMEL6qGaGJG4Cw1WVmsPJ_BTeNXWv22EBk15h83Zlt2gSpEyOQJ9T8mLAXHSIK7m0aFyQPn8v1Iyve38CS38NtanyneRUrOW99GSdVobBD_WlFoeFMpo0Shrgy4HYljQIrIzt44LdBqs0nUPakf9v-v9_YmrgtjKsIzYTV1tVQ3LA9VikXXL86Mljq9L3iQSrpbNtu1clbNH2dSbbMpXRnw3j0bbgDQPrK0SttJ3fJKS--AZQA6OQ3x0cIWskKftuKq-zfXWsX50GqFM04KIrYNi-hlHmGI4knVTvJ0uC6trHsCAVzoLkOJpTR6T5rCh3QSqOsBz9I0hcA5NmGbL2ZA4uNfh4aQjXftMpro99NjqhyW04NC5JVDKc3vfNvYuXU1nn7q4JLyjHMZUg41gtRcpoM-Vt1saPE-D_vVhnYAcQ5Xk5sBNKcnSvBF1uLd833iYIuFTaZUKSzbFI9RJeql7deAPdOB1TcrlbtHDKKYxd8PxIw6y9oolH8W6699RjMcpVPzdINyh1rlA2lmRZwjI24M5yREVSz-y3TyTCJ3P2gOnRNTB1zm6Q-gqjUupxE9kZXLkiRfT9DWj-WZhFumsHUpFpZGNDEnSQwqAja4iAf6fjaQh1mmhvl4MILxMgBYV2JjbGUm-Q0gNSzpr0fFuKddAzSuiyZuvCjnIPIJuN7xfAkGwkmrETFnlahAZJ32rU7X95nOkU_XQ4LNLshPxUtSYTQ042nEotpX2v_DS0RXXhxnik2okrFJMiCFiw3ahPE3cByb3alVHfbQL3Gpv06Fg6GtEPdbUC8aEQx3eW4gkOgDeFihWKph7RG3pd0C7mUYcM8QV9Uv8hsZCKAeP1076gxL578w3QF8AoJea4hdiFrrmB6j-sRaLPCzByKMHPzdvbtjno3I4_Kw6nhfujUQA1hwH-F5orY2Bey067zp_y6q3BkwJTjBA8CoSstPCevg-LX3-7aFYu91Kta33SrgmdsdCv2Kxm-ZhjnmXlD01wIHUFwfWIGaqFh-Bik6g22qISLYFUjNZBI6oxi2BH8M-nW9DXhyBOhBDSJqQxjmDKJiipYnSrPEp4oO4XAQTNQrnClmLELO1NjILWnx6yX5RKIJ4FZMjlfnWvZFdwi85ruVifJyISE07a6LdZF-DEMTnlC_184k-xWAXtLm3LlkfKNax3n2ZqdIRO9MLgdUSlNduD0qjdcqvqffI2E68yo9NqM=",
               "summary": []
             },
             {
-              "id": "msg_0fe7ccbc60dd3b52016a6fc5d55f7481959f2ac2bb0b91ee2c",
+              "id": "msg_00399d147c766612016ae8f409d56087d2a594f11868251332",
               "type": "message",
               "status": "completed",
               "content": [
@@ -75,7 +78,7 @@ http_interactions:
                   "type": "output_text",
                   "annotations": [],
                   "logprobs": [],
-                  "text": "{\"wrapper\":[{\"name\":\"Technology\",\"score\":0.98},{\"name\":\"Business\",\"score\":0.01},{\"name\":\"Other\",\"score\":0.01}]}"
+                  "text": "{\"wrapper\":[{\"name\":\"Technology\",\"score\":0.99},{\"name\":\"Business\",\"score\":0.01}]}"
                 }
               ],
               "phase": "final_answer",
@@ -176,14 +179,14 @@ http_interactions:
               "cache_write_tokens": 0,
               "cached_tokens": 0
             },
-            "output_tokens": 73,
+            "output_tokens": 77,
             "output_tokens_details": {
-              "reasoning_tokens": 28
+              "reasoning_tokens": 42
             },
-            "total_tokens": 196
+            "total_tokens": 200
           },
           "user": null,
           "metadata": {}
         }
-  recorded_at: 2026-08-02 22:33:59
+  recorded_at: 2026-11-02 20:35:22
 recorded_with: VCR-vcr/2.1.0

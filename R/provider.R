@@ -41,20 +41,54 @@ Provider <- new_class(
   )
 )
 
+# Get all properties of a provider as a named list, skipping the deprecated
+# ones since reading them triggers a deprecation warning. Once the deprecated
+# properties are removed (#1098) this can be replaced by S7::props().
+provider_props <- function(x, hide = character()) {
+  hide <- c(hide, "model", "params", "extra_args")
+  names <- setdiff(prop_names(x), hide)
+  set_names(lapply(names, \(name) prop(x, name)), names)
+}
+
 # Default S7 print calls every getter, which would trigger the deprecation
 # warnings. Remove along with the deprecated properties (#1098).
 method(print, Provider) <- function(x, ...) {
-  names <- setdiff(prop_names(x), c("model", "params", "extra_args"))
-  props <- set_names(lapply(names, \(name) prop(x, name)), names)
-  cat("<", class(x)[[1]], ">\n", sep = "")
-  str(
-    props,
-    no.list = TRUE,
-    give.attr = FALSE,
-    comp.str = "@ ",
-    indent.str = " "
-  )
+  provider_print(x)
   invisible(x)
+}
+
+provider_print <- function(x, hide = character()) {
+  cat("<", class(x)[[1]], ">\n", sep = "")
+  props <- provider_props(x, hide)
+  names <- format(names(props))
+  for (i in seq_along(props)) {
+    cat(" @ ", names[[i]], ":", sep = "")
+    str_prop(props[[i]])
+  }
+  invisible(x)
+}
+
+# Mirrors S7's str_inline(): R 4.7.0 moved the space after a label from the
+# nested str() call to the caller, so print it here on every version.
+str_prop <- function(x) {
+  if (is.function(x)) {
+    attr(x, "srcref") <- NULL
+  }
+  needs_space <- if (getRversion() >= "4.7.0") {
+    TRUE
+  } else if (is.environment(x)) {
+    !inherits(x, "S7_object")
+  } else if (is.object(x)) {
+    is.data.frame(x)
+  } else if (is.list(x)) {
+    length(x) > 0
+  } else {
+    is.function(x)
+  }
+  if (needs_space) {
+    cat(" ")
+  }
+  utils::str(x, give.attr = FALSE, nest.lev = 1, indent.str = "  ..")
 }
 
 test_provider <- function(name = "", base_url = "", ...) {
@@ -265,6 +299,20 @@ method(value_tokens, Provider) <- function(provider, json) {
   tokens()
 }
 
+# Number of reasoning tokens in the response, or NULL if the provider does
+# not report them separately. Used for the gen_ai.usage.reasoning.output_tokens
+# span attribute.
+value_reasoning_tokens <- new_generic(
+  "value_reasoning_tokens",
+  "provider",
+  function(provider, json) {
+    S7_dispatch()
+  }
+)
+method(value_reasoning_tokens, Provider) <- function(provider, json) {
+  NULL
+}
+
 value_finish_reason <- new_generic(
   "value_finish_reason",
   "provider",
@@ -355,6 +403,19 @@ method(models_list, Provider) <- function(provider) {
 
 method(models_list, new_S3_class("Chat")) <- function(provider) {
   models_list(provider$get_provider())
+}
+
+# Give a provider the chance to react to a model change, e.g. to swap in
+# a sibling provider with a different wire format. Returns a provider.
+provider_set_model <- new_generic(
+  "provider_set_model",
+  "provider",
+  function(provider, name) {
+    S7_dispatch()
+  }
+)
+method(provider_set_model, Provider) <- function(provider, name) {
+  provider
 }
 
 # Batch AI ---------------------------------------------------------------

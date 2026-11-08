@@ -6,7 +6,7 @@
 #' [chat_groq()]. They use the
 #' [OpenAI](https://developers.openai.com/api/docs/guides/batch),
 #' [Anthropic](https://docs.claude.com/en/docs/build-with-claude/batch-processing),
-#' [Google Gemini](https://ai.google.dev/gemini-api/docs/batch-api), and
+#' [Google Gemini](https://aistudio.google.com/docs/batch-api), and
 #' [Groq](https://console.groq.com/docs/batch) batch APIs which allow you
 #' to submit multiple requests simultaneously.
 #' The results can take up to 24 hours to complete, but in return you pay 50%
@@ -49,7 +49,7 @@
 #' will be a data frame with one row for each prompt, and one column for each
 #' property.
 #'
-#' For any of the aboves, will return `NULL` if `wait = FALSE` and the job
+#' For any of the above, will return `NULL` if `wait = FALSE` and the job
 #' is not complete.
 #' @examplesIf has_credentials("openai")
 #' chat <- chat_openai(model = "gpt-5-nano")

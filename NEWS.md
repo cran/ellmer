@@ -1,3 +1,35 @@
+# ellmer 0.5.1
+
+* Default models have been updated for a number of providers (@thisisnic, #1176):
+  * `chat_anthropic()` now uses `claude-sonnet-5-5`.
+  * `chat_aws_bedrock()` now uses `us.anthropic.claude-sonnet-5-5`.
+  * `chat_deepseek()` now uses `deepseek-flash`.
+  * `chat_google_gemini()` and `chat_google_vertex()` now use `gemini-3.8-flash`.
+  * `chat_openai()` now uses `gpt-6.1-terra`.
+  * `chat_openrouter()` now uses `gpt-6.1-terra`.
+  * `chat_posit()` now uses `claude-sonnet-5-5`.
+  * `chat_snowflake()` now uses `claude-sonnet-5-5`.
+* ellmer now records OpenTelemetry metrics following the GenAI semantic conventions whenever a meter is active, and the `chat` and `invoke_agent` spans record additional attributes including request parameters, token usage, finish reasons, and timing. See `vignette("otel")` for the full list (#1142, #1143, #1147, #1148, #1174).
+* New `vignette("otel")` describes how to turn on OpenTelemetry tracing and metrics, what ellmer records, and how ellmer's spans join your own traces (#1187).
+* ellmer now supports otelsdk 0.3.0, and OpenTelemetry spans and metrics now record an error status and `error.type` when a request is cancelled or interrupted or its response fails to parse (#1175, #1217, #1219).
+* The OpenTelemetry `gen_ai.input.messages` attribute now includes tool results that return a `Content` object, such as an image (@taekop, #1145).
+* `batch_chat_structured()` and `parallel_chat_structured()` now warn when `include_tokens` or `include_cost` is ignored because the result isn't a data frame (@taekop, #1129).
+* `Chat$get_tokens()` now works when the conversation ends with a user turn or a partial assistant turn (@taekop, #1131).
+* `Chat$stream()` now yields chunks as they arrive rather than in large bursts, so streaming from slow endpoints is smoother (@hectorgray, #1122).
+* `chat_anthropic()` and other Claude providers now default `max_tokens` to 32,000 (@simonpcouch, #1150).
+* `chat_anthropic()` and `chat_aws_bedrock()` now report correct input and cache token counts when a streamed response uses server tools such as web search (@pcbeingused333, #1194).
+* `chat_anthropic()` now handles `redacted_thinking` blocks (@pcbeingused333, #1195).
+* `chat_cloudflare()` now respects its `account` argument and handles streamed responses that contain only a number (#1164).
+* `chat_google_gemini()` now uses Google's Interactions API and supports `content_image_url()`. `params(frequency_penalty)`, `params(presence_penalty)`, `params(log_probs)`, and `params(reasoning_tokens)` are no longer supported and warn. Structured output no longer works with Gemini 2.5 models, so upgrade to Gemini 3 or newer if you use `chat_structured()` (@thisisnic, #1155).
+* `chat_google_gemini()`'s browser-based OAuth flow now uses a verified Google OAuth app and works in hosted sessions such as Posit Workbench and Google Colab. `chat_google_vertex()` no longer falls back to it (@thisisnic, #1156).
+* `chat_google_vertex()` and `chat_openai()` now report `finish_reason = "tool_use"` for turns that call a tool, matching other providers. `chat_google_vertex()` also reports the `LANGUAGE`, `IMAGE_SAFETY`, `IMAGE_PROHIBITED_CONTENT`, and `IMAGE_RECITATION` finish reasons as `"content_filter"` (@pcbeingused333, #1199).
+* `chat_openai()` now sends `type = "message"` on every Responses API input item, so OpenAI-compatible servers such as llama.cpp accept replayed assistant turns (@taekop, #1153).
+* `chat_openai_compatible()` and the providers built on it now send standard JSON Schema for tool definitions, so arguments with `required = FALSE` stay optional. `chat_openai_compatible()`, `chat_huggingface()`, `chat_openrouter()`, `chat_portkey()`, and `chat_vllm()` gain a `strict` argument to opt back in to OpenAI's strict mode (#1135).
+* `chat_openrouter()` now uses the cost reported by OpenRouter for each request, falling back to an estimate from OpenRouter's advertised model rates when no cost is reported (#1189).
+* `content_image_url()` now forwards `detail` to OpenAI and OpenAI-compatible providers (@kbenoit, #1132).
+* `live_browser()` works again with shinychat >= 0.5.0 (#1167).
+* New `models_openrouter()` lists the models available on OpenRouter along with their prices (#1189).
+
 # ellmer 0.5.0
 
 ## Lifecycle changes
