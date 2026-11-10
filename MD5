@@ -1,7 +1,7 @@
-1ce800260057ae64fbefdfb21790d8f4 *DESCRIPTION
+24ce077397b55fdac502c36d2711feb7 *DESCRIPTION
 27b95b08c32bd2171cd536285dc321b3 *LICENSE
 81cd0366537fe3924fc38eeff4f6bc83 *NAMESPACE
-bd59f4ba04ccb606c0b0534b534c2790 *NEWS.md
+1c0fee0d5bc2096c0a264fbf28e9424b *NEWS.md
 1c9841bc03e29ef277f48615ba2e7a7a *R/as-json.R
 e9585f7813b9d3867a289b4bd69955a3 *R/batch-chat.R
 88e655ea021d2cf660efb4f065ad15c7 *R/chat-structured.R
@@ -24,12 +24,12 @@ ff8db1e0e0237a5892350db68f82646b *R/import-standalone-defer.R
 36d7fd02a98ccd4efa685b82ec1ca2bb *R/interpolate.R
 423c150c4601906f364545a5517a64cf *R/live.R
 fd7676fa2c32c45b7ba2ec477398ae0f *R/model.R
-530bce06b09ee1fe9aee9cfd94b73680 *R/otel.R
+91d6d107f30a7578b3c08d3644b77e94 *R/otel.R
 2cd641ee88a7943e74ab4839aff086f2 *R/parallel-chat.R
 5ab1689ad0370d00a6f6d70236517599 *R/params.R
 95302af0d0a9e94a70d05e721df26fca *R/prices.R
 c0b53c4cef1e547f75955f825ac36ea7 *R/provider-any.R
-f073d1cbe9f54a2354550185c8508e68 *R/provider-aws-api.R
+0d9befab192a6db5e1507fc0190be435 *R/provider-aws-api.R
 37f5b8b68799e02ac445f63099b1c032 *R/provider-aws.R
 767c143e9b59719550355ad286c5aaf7 *R/provider-azure.R
 211a071ce666b2067aaa6c97ca8fd94b *R/provider-claude-files.R
@@ -61,7 +61,7 @@ c4c32a3ab49db8c35dfeccefd339db1e *R/provider-vllm.R
 87be02ac152ad077399d0a373978e53a *R/rounds.R
 c6471b029381b828d7881c43eb682d0e *R/schema.R
 272f28278964b9568cec29b379281b6c *R/stream-controller.R
-d31ceb8bbba59555c9dc29eead6e7ad7 *R/sysdata.rda
+5f9881ba2ec8ceac15c04683945cdc86 *R/sysdata.rda
 3e705b4386622672e70d7d59e34c2967 *R/tokens.R
 44494bfbd8146a04d5b123c0c0bd9b05 *R/tool-context.R
 de2e619777ff8fcf962804aea9eef0af *R/tools-built-in.R
@@ -317,7 +317,7 @@ f2887a3e7b2ed43f37971fae37210c60 *tests/testthat/test-content-document.R
 aa284ae00317dc673640a616ea223dc4 *tests/testthat/test-files.R
 39795dda344bb6c5a89d8371bfb85332 *tests/testthat/test-httr2.R
 c56aa8308248150f4f9d8037a104f318 *tests/testthat/test-interpolate.R
-a7454a60327afa43fbba457e2843ab7f *tests/testthat/test-otel.R
+d05408c3db54d233b8e2e956ab031648 *tests/testthat/test-otel.R
 4361f9abc7dd4cf09bf684e73fffc318 *tests/testthat/test-parallel-chat.R
 18e0196edc6ebbb4fad1ee3dce02dcb7 *tests/testthat/test-params.R
 262d5c247c93ab0a8360d9669a3c5380 *tests/testthat/test-prices-data.R

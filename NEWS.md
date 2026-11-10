@@ -1,3 +1,7 @@
+# ellmer 0.5.2
+
+* Fixed a timing-dependent failure in the OpenTelemetry metric tests on busy machines (#1223).
+
 # ellmer 0.5.1
 
 * Default models have been updated for a number of providers (@thisisnic, #1176):
